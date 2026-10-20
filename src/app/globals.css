@@ -24,6 +24,7 @@
     --input: 214 32% 88%;
     --ring: 182 58% 47%;
     --radius: 14px;
+    --select-chevron: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23596A82' stroke-width='2'><path d='m6 9 6 6 6-6'/></svg>");
   }
 
   * {
@@ -38,6 +39,16 @@
   h4 {
     @apply font-display;
     text-wrap: balance;
+  }
+}
+
+@layer components {
+  /* Flecha de los selectores nativos (fuera de las utilidades para que tailwind-merge no la confunda). */
+  .select-chevron {
+    background-image: var(--select-chevron);
+    background-size: 16px;
+    background-position: right 10px center;
+    background-repeat: no-repeat;
   }
 }
 
@@ -56,5 +67,11 @@
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
   }
 }

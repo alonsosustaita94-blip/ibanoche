@@ -65,7 +65,7 @@ export function SidebarNav({ items, onNavigate }: { items: NavItem[]; onNavigate
 
 export function Sidebar({ items }: { items: NavItem[] }) {
   return (
-    <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col border-r border-border/70 bg-card lg:flex">
+    <aside className="sticky top-0 hidden h-dvh w-64 print:!hidden shrink-0 flex-col border-r border-border/70 bg-card lg:flex">
       <div className="flex h-16 items-center px-5">
         <Link href="/dashboard" aria-label="Ir al dashboard">
           <BrandMark />

@@ -40,7 +40,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               read: !!n.readAt,
             }))}
           />
-          <main id="contenido" className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+          <main id="contenido" className="flex-1 px-4 py-6 sm:px-6 lg:px-8 print:p-0">
             <div className="mx-auto w-full max-w-[1400px] animate-fade-in">{children}</div>
           </main>
         </div>

@@ -36,7 +36,7 @@ export const NativeSelect = React.forwardRef<HTMLSelectElement, React.SelectHTML
     <select
       ref={ref}
       className={cn(
-        "flex h-10 w-full appearance-none rounded-lg border border-input bg-card bg-[url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23596A82%22 stroke-width=%222%22><path d=%22m6 9 6 6 6-6%22/></svg>')] bg-[length:16px] bg-[right_10px_center] bg-no-repeat px-3 pr-9 text-sm text-brand-ink shadow-sm focus-visible:border-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-60 aria-[invalid=true]:border-destructive",
+        "flex h-10 w-full appearance-none rounded-lg border border-input select-chevron bg-card px-3 pr-9 text-sm text-brand-ink shadow-sm focus-visible:border-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 disabled:opacity-60 aria-[invalid=true]:border-destructive",
         className,
       )}
       {...props}

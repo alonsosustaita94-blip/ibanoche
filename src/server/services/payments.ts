@@ -29,6 +29,9 @@ export async function registerPayment(input: { orderId: string; parts: PaymentPa
         const [order] = await tx.$queryRaw<{ id: string; branchId: string; totalCents: number; paidCents: number; status: string }[]>`
           SELECT id, "branchId", "totalCents", "paidCents", status::text FROM "Order" WHERE id = ${input.orderId} FOR UPDATE`;
         if (!order) throw new BusinessError("La orden ya no existe.");
+        // Con la orden bloqueada, un reintento simultáneo ya ve el cobro confirmado.
+        const already = await tx.payment.findMany({ where: { idempotencyKey: input.idempotencyKey } });
+        if (already.length) return { groupId: already[0].groupId, payments: already, duplicate: true, orderBranchId: order.branchId };
         if (!input.allowedBranchIds.includes(order.branchId)) throw new BusinessError("No tienes acceso a la sucursal de esta orden.");
         if (["CANCELLED", "DRAFT"].includes(order.status)) throw new BusinessError(order.status === "DRAFT" ? "Confirma la orden antes de cobrarla." : "La orden está cancelada.");
 

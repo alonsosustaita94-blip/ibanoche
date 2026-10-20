@@ -95,7 +95,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const statusOrder = ["COMPLETED", "IN_PROGRESS", "PAID", "CONFIRMED", "DRAFT", "CANCELLED"];
 
   return (
-    <div className="grid gap-6">
+    <div className="grid gap-6 [&_.grid>*]:min-w-0 [&>*]:min-w-0">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold text-brand-ink">¡Hola, {firstName}!</h1>

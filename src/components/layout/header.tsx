@@ -213,7 +213,7 @@ function Notifications({ items }: { items: HeaderProps["notifications"] }) {
 export function Header({ user, branches, activeBranchId, allowAll, nav, notifications }: HeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   return (
-    <header className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-border/70 bg-card/95 px-4 backdrop-blur sm:px-6">
+    <header className="sticky top-0 z-40 flex h-16 print:hidden items-center gap-3 border-b border-border/70 bg-card/95 px-4 backdrop-blur sm:px-6">
       <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
         <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Abrir menú" onClick={() => setMenuOpen(true)}>
           <Menu className="h-5 w-5" />

@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ibanoche
+      POSTGRES_PASSWORD: ibanoche_dev
+      POSTGRES_DB: ibanoche_crm
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  app:
+    image: mcr.microsoft.com/devcontainers/typescript-node:1-22-bookworm
+    # Comparte la red con la base: la app la encuentra en localhost:5432.
+    network_mode: service:db
+    volumes:
+      - ../..:/workspaces:cached
+    command: sleep infinity
+
+volumes:
+  pgdata:

@@ -26,6 +26,17 @@ Plataforma web administrativa y comercial: pacientes, agenda, catálogo de estud
 - Node.js 20 o superior
 - PostgreSQL 14 o superior con la extensión `unaccent` disponible (incluida en las distribuciones estándar y en servicios administrados como Neon, Supabase o RDS)
 
+## Demo en línea con GitHub Codespaces
+
+El repositorio incluye la configuración `.devcontainer/`: Codespaces levanta la app y su PostgreSQL, carga los datos de demostración y arranca el CRM en el puerto 3000.
+
+1. En GitHub, abre el repositorio en la rama del CRM → botón **Code** → pestaña **Codespaces** → **Create codespace**.
+2. Espera a que termine la preparación (instala, migra, carga la demo y compila; tarda unos minutos la primera vez).
+3. Se abre la pestaña **Puertos** con “IBANOCHE CRM” (3000). Ábrela para usar el CRM.
+4. Para compartirla: clic derecho en el puerto → **Port visibility → Public** y comparte la dirección `https://…app.github.dev`.
+
+El Codespace se suspende tras un periodo sin uso y consume horas de tu cuota de GitHub. Es una demo, no un despliegue de producción.
+
 ## Instalación local
 
 ```bash

@@ -10,6 +10,10 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   serverExternalPackages: ["bcryptjs"],
+  // Dominios adicionales desde los que se aceptan acciones de servidor (p. ej. un proxy como GitHub Codespaces).
+  experimental: {
+    serverActions: { allowedOrigins: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",") : [] },
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

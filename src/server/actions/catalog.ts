@@ -40,7 +40,7 @@ export async function saveStudyAction(studyId: string | null, formData: FormData
       if (!before) throw new BusinessError("El estudio ya no existe.");
       const after = await db.study.update({ where: { id: studyId }, data });
       await audit({ userId: user.id, action: "study.update", entity: "Study", entityId: after.id, before, after, ip });
-      revalidatePath("/catalogo");
+      revalidatePath("/crm/catalogo");
       return { id: after.id };
     }
 
@@ -51,7 +51,7 @@ export async function saveStudyAction(studyId: string | null, formData: FormData
     await setPrice(created.id, "PUBLIC", publicCents, user.id, "Precio inicial");
     if (costCents !== undefined) await setPrice(created.id, "INTERNAL_COST", costCents, user.id, "Costo inicial");
     await audit({ userId: user.id, action: "study.create", entity: "Study", entityId: created.id, after: { ...created, publicPriceCents: publicCents }, ip });
-    revalidatePath("/catalogo");
+    revalidatePath("/crm/catalogo");
     return { id: created.id };
   });
 }
@@ -63,7 +63,7 @@ export async function toggleStudyActiveAction(studyId: string) {
     if (!before) throw new BusinessError("El estudio ya no existe.");
     const after = await db.study.update({ where: { id: studyId }, data: { active: !before.active } });
     await audit({ userId: user.id, action: after.active ? "study.activate" : "study.deactivate", entity: "Study", entityId: studyId, before: { active: before.active }, after: { active: after.active }, ip: await getClientIp() });
-    revalidatePath("/catalogo");
+    revalidatePath("/crm/catalogo");
     return undefined;
   }, "Estado del estudio actualizado");
 }
@@ -110,7 +110,7 @@ export async function setPriceAction(formData: FormData) {
       after: { amountCents: after.amountCents },
       ip: await getClientIp(),
     });
-    revalidatePath("/catalogo");
+    revalidatePath("/crm/catalogo");
     return undefined;
   }, "Tarifa actualizada");
 }

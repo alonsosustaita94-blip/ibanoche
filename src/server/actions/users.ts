@@ -45,7 +45,7 @@ export async function createUserAction(input: unknown) {
       },
     });
     await audit({ userId: actor.id, action: "user.create", entity: "User", entityId: created.id, after: { ...publicUser(created), role: d.roleKey, branchIds: d.branchIds }, ip: await getClientIp() });
-    revalidatePath("/configuracion");
+    revalidatePath("/crm/configuracion");
     return { id: created.id };
   }, "Usuario creado");
 }
@@ -88,7 +88,7 @@ export async function updateUserAction(userId: string, input: unknown) {
       after: { ...publicUser(after), role: d.roleKey, branchIds: d.branchIds },
       ip: await getClientIp(),
     });
-    revalidatePath("/configuracion");
+    revalidatePath("/crm/configuracion");
     return undefined;
   }, "Usuario actualizado");
 }
@@ -104,7 +104,7 @@ export async function resetUserPasswordAction(userId: string, input: unknown) {
       db.session.deleteMany({ where: { userId } }),
     ]);
     await audit({ userId: actor.id, action: "user.password_reset", entity: "User", entityId: userId, summary: target.email, ip: await getClientIp() });
-    revalidatePath("/configuracion");
+    revalidatePath("/crm/configuracion");
     return undefined;
   }, "Contraseña restablecida. Comparte la contraseña temporal por un medio seguro.");
 }
@@ -132,7 +132,7 @@ export async function saveRolePermissionsAction(input: unknown) {
       after: { permissions: after.permissions, maxDiscountBps: after.maxDiscountBps },
       ip: await getClientIp(),
     });
-    revalidatePath("/configuracion");
+    revalidatePath("/crm/configuracion");
     return undefined;
   }, "Permisos del rol guardados");
 }

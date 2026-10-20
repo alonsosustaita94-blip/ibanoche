@@ -18,7 +18,7 @@ export async function openCashAction(branchId: string, openingCents: number) {
     assertBranch(user, input.branchId);
     const session = await openCashSession(input.branchId, input.openingCents, user.id);
     await audit({ userId: user.id, action: "cash.open", entity: "CashRegisterSession", entityId: session.id, branchId: session.branchId, after: session, ip: await getClientIp() });
-    revalidatePath("/caja");
+    revalidatePath("/crm/caja");
     return undefined;
   }, "Caja abierta");
 }
@@ -32,7 +32,7 @@ export async function closeCashAction(sessionId: string, countedCashCents: numbe
     assertBranch(user, session.branchId);
     const { closed } = await closeCashSession(input.sessionId, input.countedCashCents, user.id, input.notes ?? undefined);
     await audit({ userId: user.id, action: "cash.close", entity: "CashRegisterSession", entityId: closed.id, branchId: closed.branchId, summary: `Diferencia ${closed.differenceCents}`, after: closed, ip: await getClientIp() });
-    revalidatePath("/caja");
+    revalidatePath("/crm/caja");
     return { differenceCents: closed.differenceCents ?? 0 };
   }, "Corte de caja registrado");
 }
@@ -46,8 +46,8 @@ export async function chargeOrderAction(raw: unknown) {
     if (!result.duplicate) {
       await audit({ userId: user.id, action: "payment.register", entity: "Payment", entityId: result.groupId, branchId: result.payments[0]?.branchId, summary: result.payments.map((p) => p.folio).join(", "), after: result.payments, ip: await getClientIp() });
     }
-    revalidatePath("/caja");
-    revalidatePath(`/ordenes/${input.orderId}`);
+    revalidatePath("/crm/caja");
+    revalidatePath(`/crm/ordenes/${input.orderId}`);
     return { groupId: result.groupId, duplicate: result.duplicate };
   });
 }
@@ -107,8 +107,8 @@ export async function posSaleAction(raw: unknown) {
     if (!result.duplicate) {
       await audit({ userId: user.id, action: "payment.register", entity: "Payment", entityId: result.groupId, branchId: input.branchId, summary: result.payments.map((p) => p.folio).join(", "), after: result.payments, ip });
     }
-    revalidatePath("/caja");
-    revalidatePath("/ordenes");
+    revalidatePath("/crm/caja");
+    revalidatePath("/crm/ordenes");
     return { groupId: result.groupId, orderId: orderId!, duplicate: result.duplicate };
   });
 }

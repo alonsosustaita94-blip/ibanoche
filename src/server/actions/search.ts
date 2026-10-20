@@ -24,7 +24,7 @@ export async function globalSearchAction(raw: string): Promise<SearchHit[]> {
       take: 5,
       orderBy: { updatedAt: "desc" },
     });
-    hits.push(...patients.map((p) => ({ type: "patient" as const, id: p.id, title: fullName(p), subtitle: `${p.folio} · ${p.phone ?? "sin teléfono"}`, href: `/pacientes/${p.id}` })));
+    hits.push(...patients.map((p) => ({ type: "patient" as const, id: p.id, title: fullName(p), subtitle: `${p.folio} · ${p.phone ?? "sin teléfono"}`, href: `/crm/pacientes/${p.id}` })));
   }
   if (can(user, "catalog.view")) {
     const studies = await db.study.findMany({
@@ -32,15 +32,15 @@ export async function globalSearchAction(raw: string): Promise<SearchHit[]> {
       take: 4,
       include: { category: true },
     });
-    hits.push(...studies.map((s) => ({ type: "study" as const, id: s.id, title: s.name, subtitle: `${s.code} · ${s.category.name}`, href: `/catalogo?q=${encodeURIComponent(s.code)}` })));
+    hits.push(...studies.map((s) => ({ type: "study" as const, id: s.id, title: s.name, subtitle: `${s.code} · ${s.category.name}`, href: `/crm/catalogo?q=${encodeURIComponent(s.code)}` })));
   }
   if (can(user, "quotes.view")) {
     const quotes = await db.quote.findMany({ where: { branchId: { in: branchIds }, folio: { contains: q, mode: "insensitive" } }, take: 3 });
-    hits.push(...quotes.map((x) => ({ type: "quote" as const, id: x.id, title: x.folio, subtitle: "Cotización", href: `/cotizaciones/${x.id}` })));
+    hits.push(...quotes.map((x) => ({ type: "quote" as const, id: x.id, title: x.folio, subtitle: "Cotización", href: `/crm/cotizaciones/${x.id}` })));
   }
   if (can(user, "orders.view")) {
     const orders = await db.order.findMany({ where: { branchId: { in: branchIds }, folio: { contains: q, mode: "insensitive" } }, take: 3 });
-    hits.push(...orders.map((x) => ({ type: "order" as const, id: x.id, title: x.folio, subtitle: "Orden", href: `/ordenes/${x.id}` })));
+    hits.push(...orders.map((x) => ({ type: "order" as const, id: x.id, title: x.folio, subtitle: "Orden", href: `/crm/ordenes/${x.id}` })));
   }
   return hits;
 }

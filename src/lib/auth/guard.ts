@@ -15,8 +15,8 @@ export class AuthError extends Error {
 /** Para páginas: redirige al inicio de sesión o muestra "sin acceso". */
 export async function requirePage(permission?: Permission): Promise<SessionUser> {
   const user = await getSessionUser();
-  if (!user) redirect("/login");
-  if (permission && !user.permissions.includes(permission)) redirect("/sin-acceso");
+  if (!user) redirect("/crm/login");
+  if (permission && !user.permissions.includes(permission)) redirect("/crm/sin-acceso");
   return user;
 }
 

@@ -29,14 +29,14 @@ export async function savePatientAction(patientId: string | null, formData: Form
       assertBranch(user, existing.branchId);
       const { before, after } = await updatePatient(patientId, input);
       await audit({ userId: user.id, action: "patient.update", entity: "Patient", entityId: after.id, branchId: after.branchId, before, after, ip: await getClientIp() });
-      revalidatePath(`/pacientes/${after.id}`);
-      revalidatePath("/pacientes");
+      revalidatePath(`/crm/pacientes/${after.id}`);
+      revalidatePath("/crm/pacientes");
       return { id: after.id };
     }
 
     const created = await createPatient(input);
     await audit({ userId: user.id, action: "patient.create", entity: "Patient", entityId: created.id, branchId: created.branchId, after: created, ip: await getClientIp() });
-    revalidatePath("/pacientes");
+    revalidatePath("/crm/pacientes");
     return { id: created.id };
   });
 }
@@ -49,7 +49,7 @@ export async function addInteractionAction(formData: FormData) {
     if (!patient) throw new BusinessError("El paciente ya no existe.");
     assertBranch(user, patient.branchId);
     await db.patientInteraction.create({ data: { ...input, userId: user.id } });
-    revalidatePath(`/pacientes/${input.patientId}`);
+    revalidatePath(`/crm/pacientes/${input.patientId}`);
     return undefined;
   }, "Interacción registrada");
 }

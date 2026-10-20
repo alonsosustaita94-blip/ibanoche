@@ -36,13 +36,13 @@ export async function savePartnerAction(id: string | null, formData: FormData) {
       const before = await loadPartner(user, id);
       const after = await db.partner.update({ where: { id }, data: { ...data, startDate: input.startDate ? new Date(input.startDate) : before.startDate ?? data.startDate } });
       await audit({ userId: user.id, action: "partner.update", entity: "Partner", entityId: id, branchId: after.branchId, before, after, ip: await getClientIp() });
-      revalidatePath("/convenios");
-      revalidatePath(`/convenios/${id}`);
+      revalidatePath("/crm/convenios");
+      revalidatePath(`/crm/convenios/${id}`);
       return { id };
     }
     const created = await db.partner.create({ data });
     await audit({ userId: user.id, action: "partner.create", entity: "Partner", entityId: created.id, branchId: created.branchId, after: created, ip: await getClientIp() });
-    revalidatePath("/convenios");
+    revalidatePath("/crm/convenios");
     return { id: created.id };
   });
 }
@@ -58,8 +58,8 @@ export async function setPartnerStatusAction(id: string, status: string) {
       data: { status: status as (typeof PARTNER_STATUSES)[number], ...(status === "ACTIVE" && !before.startDate ? { startDate: new Date() } : {}) },
     });
     await audit({ userId: user.id, action: "partner.status", entity: "Partner", entityId: id, branchId: after.branchId, before: { status: before.status }, after: { status: after.status }, ip: await getClientIp() });
-    revalidatePath(`/convenios/${id}`);
-    revalidatePath("/convenios");
+    revalidatePath(`/crm/convenios/${id}`);
+    revalidatePath("/crm/convenios");
     return undefined;
   }, "Estado actualizado");
 }
@@ -83,12 +83,12 @@ export async function saveAgreementAction(id: string | null, formData: FormData)
       if (!before) throw new BusinessError("El acuerdo ya no existe.");
       const after = await db.agreement.update({ where: { id }, data });
       await audit({ userId: user.id, action: "agreement.update", entity: "Agreement", entityId: id, branchId: partner.branchId, before, after, ip: await getClientIp() });
-      revalidatePath(`/convenios/${partner.id}`);
+      revalidatePath(`/crm/convenios/${partner.id}`);
       return { id };
     }
     const created = await db.agreement.create({ data: { ...data, partnerId: partner.id } });
     await audit({ userId: user.id, action: "agreement.create", entity: "Agreement", entityId: created.id, branchId: partner.branchId, after: created, ip: await getClientIp() });
-    revalidatePath(`/convenios/${partner.id}`);
+    revalidatePath(`/crm/convenios/${partner.id}`);
     return { id: created.id };
   });
 }
@@ -102,7 +102,7 @@ export async function cancelAgreementAction(id: string) {
     if (agreement.status === "CANCELLED") throw new BusinessError("El acuerdo ya está cancelado.");
     await db.agreement.update({ where: { id }, data: { status: "CANCELLED" } });
     await audit({ userId: user.id, action: "agreement.cancel", entity: "Agreement", entityId: id, branchId: partner.branchId, before: { status: agreement.status }, after: { status: "CANCELLED" }, ip: await getClientIp() });
-    revalidatePath(`/convenios/${partner.id}`);
+    revalidatePath(`/crm/convenios/${partner.id}`);
     return undefined;
   }, "Acuerdo cancelado");
 }

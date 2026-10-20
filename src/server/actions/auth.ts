@@ -51,7 +51,7 @@ export async function loginAction(_prev: LoginState, formData: FormData): Promis
   await createSession(user.id, user.defaultBranchId);
   await audit({ userId: user.id, action: "auth.login", entity: "User", entityId: user.id, ip: await getClientIp() });
 
-  const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+  const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/crm/dashboard";
   redirect(safeNext);
 }
 
@@ -59,13 +59,13 @@ export async function logoutAction() {
   const user = await getSessionUser();
   if (user) await audit({ userId: user.id, action: "auth.logout", entity: "User", entityId: user.id });
   await destroySession();
-  redirect("/login");
+  redirect("/crm/login");
 }
 
 /** Cambia la sucursal activa de la sesión ("" = todas las permitidas). */
 export async function setActiveBranchAction(branchId: string) {
   const user = await getSessionUser();
-  if (!user) redirect("/login");
+  if (!user) redirect("/crm/login");
   if (branchId && !user.branchIds.includes(branchId)) return { ok: false as const, error: "No tienes acceso a esa sucursal." };
   await db.session.update({ where: { id: user.sessionId }, data: { activeBranchId: branchId || null } });
   return { ok: true as const };

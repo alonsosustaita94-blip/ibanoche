@@ -33,7 +33,7 @@ async function putSetting(key: string, value: object, userId: string) {
   return { before, after: merged };
 }
 
-const done = () => revalidatePath("/configuracion");
+const done = () => revalidatePath("/crm/configuracion");
 
 export async function saveGeneralSettingsAction(formData: FormData) {
   return runAction(async () => {
@@ -112,7 +112,7 @@ export async function saveScheduleAction(input: unknown) {
     const after = await db.branchSchedule.findMany({ where: { branchId: d.branchId }, orderBy: { weekday: "asc" } });
     await audit({ userId: user.id, action: "schedule.update", entity: "BranchSchedule", entityId: d.branchId, branchId: d.branchId, before, after, ip: await getClientIp() });
     done();
-    revalidatePath("/agenda");
+    revalidatePath("/crm/agenda");
     return undefined;
   }, "Horario guardado");
 }

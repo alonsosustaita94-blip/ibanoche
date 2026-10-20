@@ -250,7 +250,7 @@ export function Header({ user, branches, activeBranchId, allowAll, nav, notifica
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <Link href="/perfil">
+            <Link href="/crm/perfil">
               <UserRound /> Mi perfil
             </Link>
           </DropdownMenuItem>

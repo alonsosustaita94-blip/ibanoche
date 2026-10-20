@@ -43,7 +43,7 @@ export async function saveOpportunityAction(id: string | null, formData: FormDat
       if (!before) throw new BusinessError("La oportunidad ya no existe o no tienes acceso.");
       const after = await db.opportunity.update({ where: { id }, data });
       await audit({ userId: user.id, action: "opportunity.update", entity: "Opportunity", entityId: id, branchId: after.branchId, before, after, ip: await getClientIp() });
-      revalidatePath("/oportunidades");
+      revalidatePath("/crm/oportunidades");
       return { id };
     }
 
@@ -51,7 +51,7 @@ export async function saveOpportunityAction(id: string | null, formData: FormDat
     const last = await db.opportunity.aggregate({ _max: { position: true }, where: { stage } });
     const created = await db.opportunity.create({ data: { ...data, stage, position: (last._max.position ?? -1) + 1, source: "OTHER" } });
     await audit({ userId: user.id, action: "opportunity.create", entity: "Opportunity", entityId: created.id, branchId: created.branchId, after: created, ip: await getClientIp() });
-    revalidatePath("/oportunidades");
+    revalidatePath("/crm/oportunidades");
     return { id: created.id };
   });
 }
@@ -90,7 +90,7 @@ export async function moveOpportunityAction(raw: { id: string; stage: string; po
     if (stageChanged) {
       await audit({ userId: user.id, action: "opportunity.move", entity: "Opportunity", entityId: before.id, branchId: before.branchId, before: { stage: before.stage }, after: { stage: after.stage, lostReason: after.lostReason }, ip: await getClientIp() });
     }
-    revalidatePath("/oportunidades");
+    revalidatePath("/crm/oportunidades");
     return undefined;
   }, "Oportunidad actualizada");
 }

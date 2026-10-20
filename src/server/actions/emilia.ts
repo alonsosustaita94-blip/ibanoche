@@ -36,7 +36,7 @@ export async function replyConversationAction(formData: FormData) {
       return m;
     });
     await audit({ userId: user.id, action: "conversation.reply", entity: "Conversation", entityId: conv.id, branchId: conv.branchId, after: { messageId: message.id }, ip: await getClientIp() });
-    revalidatePath("/emilia");
+    revalidatePath("/crm/emilia");
     return { id: message.id };
   }, "Respuesta guardada en el CRM");
 }
@@ -65,7 +65,7 @@ export async function setConversationStatusAction(conversationId: string, action
       },
     });
     await audit({ userId: user.id, action: `conversation.${action}`, entity: "Conversation", entityId: conv.id, branchId: conv.branchId, before: { status: conv.status, assignedToId: conv.assignedToId }, after: { status: after.status, assignedToId: after.assignedToId }, ip: await getClientIp() });
-    revalidatePath("/emilia");
+    revalidatePath("/crm/emilia");
     return undefined;
   }, copy.toast);
 }
@@ -81,7 +81,7 @@ export async function linkConversationPatientAction(conversationId: string, pati
     }
     await db.conversation.update({ where: { id: conv.id }, data: { patientId: input.patientId } });
     await audit({ userId: user.id, action: "conversation.link_patient", entity: "Conversation", entityId: conv.id, branchId: conv.branchId, before: { patientId: conv.patientId }, after: { patientId: input.patientId }, ip: await getClientIp() });
-    revalidatePath("/emilia");
+    revalidatePath("/crm/emilia");
     return undefined;
   }, patientId ? "Paciente vinculado" : "Paciente desvinculado");
 }

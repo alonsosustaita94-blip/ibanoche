@@ -146,9 +146,9 @@ async function main() {
   }
 
   const branchData = [
-    { code: "DEMO-SUC1", name: "Sucursal Demo Centro", address: "Dirección de demostración 100, Puebla", phone: "222 000 0100" },
-    { code: "DEMO-SUC2", name: "Sucursal Demo Norte", address: "Dirección de demostración 200, Puebla", phone: "222 000 0200" },
-    { code: "DEMO-SUC3", name: "Sucursal Demo Sur", address: "Dirección de demostración 300, Puebla", phone: "222 000 0300" },
+    // Nombres del sitio web. Dirección y teléfono pendientes de validar: no se inventan.
+    { code: "TM4", name: "Torres Médicas 4", address: null, phone: null },
+    { code: "CMD", name: "Centro Médico de Diagnóstico", address: null, phone: null },
   ];
   const branches = [];
   for (const b of branchData) {
@@ -163,7 +163,7 @@ async function main() {
           opensAt: "07:00",
           closesAt: wd === 6 ? "13:00" : "15:00",
           slotMinutes: 30,
-          capacity: b.code === "DEMO-SUC1" ? 3 : 2,
+          capacity: b.code === "TM4" ? 3 : 2,
           homeService: wd !== 6,
         },
       });
@@ -180,8 +180,7 @@ async function main() {
     { email: "caja@demo.ibanoche.mx", name: "Luis Ramírez (demo)", role: "CASHIER", branches: [branchIds[0]] },
     { email: "comercial@demo.ibanoche.mx", name: "Sofía López (demo)", role: "SALES", branches: branchIds },
     { email: "lectura@demo.ibanoche.mx", name: "Consulta General (demo)", role: "READ_ONLY", branches: branchIds },
-    { email: "recepcion.norte@demo.ibanoche.mx", name: "Paola Cruz (demo)", role: "RECEPTION", branches: [branchIds[1]] },
-    { email: "recepcion.sur@demo.ibanoche.mx", name: "Diego Ortiz (demo)", role: "RECEPTION", branches: [branchIds[2]] },
+    { email: "recepcion.cmd@demo.ibanoche.mx", name: "Paola Cruz (demo)", role: "RECEPTION", branches: [branchIds[1]] },
   ];
   const users: Record<string, { id: string; branches: string[] }> = {};
   for (const u of userDefs) {
@@ -277,7 +276,7 @@ async function main() {
           phone: `222 000 ${String(5100 + i).padStart(4, "0")}`,
           email: `convenio${i + 1}@example.com`,
           owner: { connect: { id: salesUser } },
-          branch: { connect: { id: branchIds[i % 3] } },
+          branch: { connect: { id: branchIds[i % branchIds.length] } },
           startDate: status === "ACTIVE" ? new Date(now.getTime() - int(30, 300) * DAY) : null,
           notes: "Registro ficticio de demostración.",
           isDemo: true,
@@ -298,7 +297,7 @@ async function main() {
     const firstName = pick(FIRST);
     const lastName = pick(LAST);
     const secondLastName = pick(LAST);
-    const branchId = i % 5 === 0 ? branchIds[2] : i % 3 === 0 ? branchIds[1] : branchIds[0];
+    const branchId = i % 5 === 0 || i % 3 === 0 ? branchIds[1] : branchIds[0];
     const type = pick(types);
     const phone = `222 000 ${String(1000 + i).padStart(4, "0")}`;
     const createdAt = new Date(now.getTime() - int(0, 200) * DAY - int(0, 600) * 60000);
@@ -574,7 +573,7 @@ async function main() {
         position: i,
         estimatedCents: pesos * 100,
         owner: { connect: { id: salesUser } },
-        branch: { connect: { id: branchIds[i % 3] } },
+        branch: { connect: { id: branchIds[i % branchIds.length] } },
         partner: partners.find((p) => p.organization === prospectName) ? { connect: { id: partners.find((p) => p.organization === prospectName)!.id } } : undefined,
         nextFollowUpAt: stage === "WON" || stage === "LOST" ? null : mxDate(int(-2, 10), 10),
         notes: "Oportunidad ficticia de demostración.",
@@ -631,9 +630,9 @@ async function main() {
   });
   await db.notification.createMany({
     data: [
-      { title: "Cotizaciones por vencer", body: "Hay cotizaciones demo que vencen esta semana.", level: "warning", link: "/cotizaciones?status=SENT" },
-      { title: "Conversación transferida", body: "Emilia transfirió una conversación a recepción.", level: "info", link: "/emilia" },
-      { title: "Caja abierta", body: "La caja de la Sucursal Demo Centro está abierta.", level: "success", link: "/caja" },
+      { title: "Cotizaciones por vencer", body: "Hay cotizaciones demo que vencen esta semana.", level: "warning", link: "/crm/cotizaciones?status=SENT" },
+      { title: "Conversación transferida", body: "Emilia transfirió una conversación a recepción.", level: "info", link: "/crm/emilia" },
+      { title: "Caja abierta", body: "La caja de Torres Médicas 4 está abierta.", level: "success", link: "/crm/caja" },
     ].map((n) => ({ ...n, userId: null, branchId: branchIds[0] })),
   });
 

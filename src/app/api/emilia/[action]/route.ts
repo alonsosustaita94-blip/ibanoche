@@ -147,7 +147,7 @@ async function handle(action: Action, input: unknown, client: ApiClientContext) 
         where: { id: d.conversationId },
         data: { status: "TRANSFERRED", handoffReason: d.reason, messages: { create: { sender: "SYSTEM", body: `Conversación transferida a personal humano: ${d.reason}` } } },
       });
-      await db.notification.create({ data: { branchId: conv.branchId, title: "Conversación transferida", body: `${conv.contactName}: ${d.reason}`, level: "warning", link: `/emilia?c=${conv.id}` } });
+      await db.notification.create({ data: { branchId: conv.branchId, title: "Conversación transferida", body: `${conv.contactName}: ${d.reason}`, level: "warning", link: `/crm/emilia?c=${conv.id}` } });
       return { conversationId: conv.id, status: conv.status };
     }
   }

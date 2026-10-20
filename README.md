@@ -1,8 +1,11 @@
-# IBANOCHE CRM
+# IBANOCHE — Sitio web y CRM
 
-**Administración y gestión comercial inteligente** para IBANOCHE — Laboratorio de Análisis Clínicos.
+Una sola aplicación para IBANOCHE — Laboratorio de Análisis Clínicos:
 
-Plataforma web administrativa y comercial: pacientes, agenda, catálogo de estudios, cotizaciones, órdenes, caja, conversaciones de Emilia IA, oportunidades, convenios, reportes y configuración.
+- **`/`** — Sitio web público (inicio, estudios clínicos, servicios, renta de consultorio, profesionales, nosotros, sucursales, contacto, aviso de privacidad).
+- **`/crm`** — **IBANOCHE CRM**, *administración y gestión comercial inteligente*: pacientes, agenda, catálogo, cotizaciones, órdenes, caja, Emilia IA, oportunidades, convenios, reportes y configuración. Requiere inicio de sesión del personal (`/crm/login`).
+
+**Integración sitio → CRM:** el formulario de solicitud del sitio (`/contacto#solicitud`, con `?tipo=informacion|cita|profesional|empresa|consultorio`) registra cada solicitud en el CRM como oportunidad (etapa *Prospecto*, origen *Sitio web*) y notifica a la sucursal. Incluye aceptación del aviso de privacidad, campo trampa anti-spam, tiempo mínimo de llenado y límite de envíos por IP. El pie del sitio tiene el enlace **Acceso personal** al CRM.
 
 > **Alcance:** este CRM **no es un sistema clínico ni un LIMS**. No almacena resultados de laboratorio, valores analíticos, diagnósticos, tratamientos ni interpretaciones médicas. El procesamiento de muestras y la emisión de resultados viven en un sistema clínico independiente.
 
@@ -32,7 +35,7 @@ El repositorio incluye la configuración `.devcontainer/`: Codespaces levanta la
 
 1. En GitHub, abre el repositorio en la rama del CRM → botón **Code** → pestaña **Codespaces** → **Create codespace**.
 2. Espera a que termine la preparación (instala, migra, carga la demo y compila; tarda unos minutos la primera vez).
-3. Se abre la pestaña **Puertos** con “IBANOCHE CRM” (3000). Ábrela para usar el CRM.
+3. Se abre la pestaña **Puertos** con “IBANOCHE” (3000). La dirección abre el sitio web; el CRM está en `/crm`.
 4. Para compartirla: clic derecho en el puerto → **Port visibility → Public** y comparte la dirección `https://…app.github.dev`.
 
 El Codespace se suspende tras un periodo sin uso y consume horas de tu cuota de GitHub. Es una demo, no un despliegue de producción.
@@ -44,7 +47,7 @@ npm install
 cp .env.example .env            # y edita los valores
 npx prisma migrate deploy       # crea las tablas
 npm run db:seed                 # carga los datos de demostración
-npm run dev                     # http://localhost:3000
+npm run dev                     # sitio: http://localhost:3000 · CRM: http://localhost:3000/crm
 ```
 
 Para crear la base de datos local (ejemplo):
@@ -62,8 +65,8 @@ Contraseña para todas: `Demo2026!`
 | --- | --- | --- |
 | admin@demo.ibanoche.mx | Administrador | Todas |
 | supervisor@demo.ibanoche.mx | Supervisor | Todas |
-| recepcion@demo.ibanoche.mx | Recepción | Demo Centro |
-| caja@demo.ibanoche.mx | Caja | Demo Centro |
+| recepcion@demo.ibanoche.mx | Recepción | Torres Médicas 4 |
+| caja@demo.ibanoche.mx | Caja | Torres Médicas 4 |
 | comercial@demo.ibanoche.mx | Comercial | Todas |
 | lectura@demo.ibanoche.mx | Solo lectura | Todas |
 
@@ -87,18 +90,18 @@ Nunca subas `.env` al repositorio.
 
 | Módulo | Ruta | Permiso |
 | --- | --- | --- |
-| Dashboard | `/dashboard` | `dashboard.view` |
-| Pacientes | `/pacientes` | `patients.view` / `patients.manage` |
-| Agenda y citas | `/agenda` | `appointments.view` / `appointments.manage` |
-| Catálogo de estudios | `/catalogo` | `catalog.view` / `catalog.manage` / `catalog.viewCost` / `prices.manage` |
-| Cotizaciones | `/cotizaciones` | `quotes.view` / `quotes.manage` |
-| Órdenes | `/ordenes` | `orders.view` / `orders.manage` |
-| Caja / POS | `/caja` | `pos.charge` / `pos.cashSession` / `pos.void` |
-| Emilia IA | `/emilia` | `emilia.view` / `emilia.reply` |
-| Oportunidades | `/oportunidades` | `opportunities.view` / `opportunities.manage` |
-| Convenios | `/convenios` | `partners.view` / `partners.manage` |
-| Reportes | `/reportes` | `reports.view` / `reports.export` |
-| Configuración | `/configuracion` | `settings.*`, `users.manage`, `audit.view` |
+| Dashboard | `/crm/dashboard` | `dashboard.view` |
+| Pacientes | `/crm/pacientes` | `patients.view` / `patients.manage` |
+| Agenda y citas | `/crm/agenda` | `appointments.view` / `appointments.manage` |
+| Catálogo de estudios | `/crm/catalogo` | `catalog.view` / `catalog.manage` / `catalog.viewCost` / `prices.manage` |
+| Cotizaciones | `/crm/cotizaciones` | `quotes.view` / `quotes.manage` |
+| Órdenes | `/crm/ordenes` | `orders.view` / `orders.manage` |
+| Caja / POS | `/crm/caja` | `pos.charge` / `pos.cashSession` / `pos.void` |
+| Emilia IA | `/crm/emilia` | `emilia.view` / `emilia.reply` |
+| Oportunidades | `/crm/oportunidades` | `opportunities.view` / `opportunities.manage` |
+| Convenios | `/crm/convenios` | `partners.view` / `partners.manage` |
+| Reportes | `/crm/reportes` | `reports.view` / `reports.export` |
+| Configuración | `/crm/configuracion` | `settings.*`, `users.manage`, `audit.view` |
 
 Los permisos por rol iniciales están en `src/lib/auth/permissions.ts` y se guardan en la tabla `Role`; el administrador puede ajustarlos en Configuración → Usuarios y roles.
 
@@ -110,11 +113,13 @@ prisma/
   migrations/              Migraciones SQL (incluye índices parciales y restricciones CHECK)
   seed.ts                  Datos de demostración
 src/
-  app/(auth)/login         Inicio de sesión
-  app/(app)/<módulo>       Páginas de cada módulo (componentes de servidor)
+  app/(site)/              Sitio web público
+  app/crm/(auth)/login     Inicio de sesión del CRM
+  app/crm/(app)/<módulo>   Páginas de cada módulo del CRM (componentes de servidor)
   app/api/emilia/[action]  API para Emilia IA (llave + alcances)
   app/api/...              Exportaciones (CSV) y PDF de cotizaciones
-  components/ui            Componentes base (estilo shadcn/ui)
+  components/site          Componentes del sitio web
+  components/ui            Componentes base del CRM (estilo shadcn/ui)
   components/shared        Componentes compartidos (tablas, filtros, selectores, estados)
   components/charts        Gráficas (Recharts)
   lib/auth                 Sesiones, permisos y guardas
@@ -181,7 +186,9 @@ Programa `backup.sh` a diario, guarda las copias fuera del servidor y prueba la 
 **Información del laboratorio**
 - [ ] Catálogo real de estudios, **precios públicos aprobados** y costos internos (los actuales son ficticios con código `DEMO-`).
 - [ ] Tipos de muestra, indicaciones de preparación y tiempos de entrega **validados por el laboratorio** (hoy están como pendientes; el sistema no los inventa).
-- [ ] Sucursales, horarios, capacidad por intervalo y servicio a domicilio reales.
+- [ ] Direcciones, teléfonos, horarios, capacidad por intervalo y servicio a domicilio reales de Torres Médicas 4 y Centro Médico de Diagnóstico.
+- [ ] Texto legal del aviso de privacidad (`/aviso-de-privacidad` está reservado y marcado como en preparación).
+- [ ] Datos de contacto, fotografías y logotipo del sitio web (ver `src/config/site.ts`).
 - [ ] Usuarios reales, roles y descuentos máximos autorizados por rol; promociones vigentes.
 - [ ] Logotipo oficial (hoy se usa una marca tipográfica provisional en `src/components/layout/brand.tsx`).
 

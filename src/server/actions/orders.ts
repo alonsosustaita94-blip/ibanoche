@@ -30,7 +30,7 @@ export async function createOrderAction(raw: unknown) {
       { userId: user.id, roleMaxBps: user.maxDiscountBps },
     );
     await audit({ userId: user.id, action: "order.create", entity: "Order", entityId: order.id, branchId: order.branchId, summary: order.folio, after: order, ip: await getClientIp() });
-    revalidatePath("/ordenes");
+    revalidatePath("/crm/ordenes");
     return { id: order.id, folio: order.folio };
   });
 }
@@ -42,8 +42,8 @@ export async function changeOrderStatusAction(orderId: string, to: string, note?
     await loadOrderForUser(input.orderId, user.branchIds);
     const { before, after } = await changeOrderStatus(input.orderId, input.to, user.id, input.note);
     await audit({ userId: user.id, action: "order.status", entity: "Order", entityId: after.id, branchId: after.branchId, summary: `${before.status} → ${after.status}${input.note ? `: ${input.note}` : ""}`, before: { status: before.status }, after: { status: after.status }, ip: await getClientIp() });
-    revalidatePath("/ordenes");
-    revalidatePath(`/ordenes/${after.id}`);
+    revalidatePath("/crm/ordenes");
+    revalidatePath(`/crm/ordenes/${after.id}`);
     return undefined;
   }, "Estado de la orden actualizado");
 }
@@ -55,7 +55,7 @@ export async function addOrderNoteAction(orderId: string, note: string) {
     const order = await loadOrderForUser(input.orderId, user.branchIds);
     await addOrderNote(order.id, input.note, user.id);
     await audit({ userId: user.id, action: "order.note", entity: "Order", entityId: order.id, branchId: order.branchId, summary: input.note.slice(0, 120) });
-    revalidatePath(`/ordenes/${order.id}`);
+    revalidatePath(`/crm/ordenes/${order.id}`);
     return undefined;
   }, "Nota agregada");
 }
@@ -72,7 +72,7 @@ export async function requestInvoiceAction(raw: unknown) {
     const req = await db.invoiceRequest.create({ data: { ...input, orderId: order.id } });
     await db.orderEvent.create({ data: { orderId: order.id, type: "invoice_requested", note: `Solicitud de factura para RFC ${input.rfc}`, userId: user.id } });
     await audit({ userId: user.id, action: "invoice.request", entity: "InvoiceRequest", entityId: req.id, branchId: order.branchId, summary: order.folio, after: req, ip: await getClientIp() });
-    revalidatePath(`/ordenes/${order.id}`);
+    revalidatePath(`/crm/ordenes/${order.id}`);
     return undefined;
   }, "Solicitud de factura registrada");
 }
@@ -86,8 +86,8 @@ export async function voidPaymentAction(paymentId: string, reason: string) {
     assertBranch(user, payment.branchId);
     const voided = await voidPayment(payment.id, user.id, input.reason);
     await audit({ userId: user.id, action: "payment.void", entity: "Payment", entityId: voided.id, branchId: voided.branchId, summary: `${voided.folio}: ${input.reason}`, before: { status: "REGISTERED" }, after: { status: "VOIDED" }, ip: await getClientIp() });
-    revalidatePath(`/ordenes/${payment.orderId}`);
-    revalidatePath("/caja");
+    revalidatePath(`/crm/ordenes/${payment.orderId}`);
+    revalidatePath("/crm/caja");
     return undefined;
   }, "Cobro anulado");
 }

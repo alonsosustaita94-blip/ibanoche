@@ -1,5 +1,5 @@
 {
-  "name": "IBANOCHE CRM (demo)",
+  "name": "IBANOCHE sitio + CRM (demo)",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
@@ -9,7 +9,7 @@
   },
   "forwardPorts": [3000],
   "portsAttributes": {
-    "3000": { "label": "IBANOCHE CRM", "onAutoForward": "openBrowser" }
+    "3000": { "label": "IBANOCHE (sitio y /crm)", "onAutoForward": "openBrowser" }
   },
   "postCreateCommand": "bash .devcontainer/setup.sh",
   "postStartCommand": "bash .devcontainer/start.sh",

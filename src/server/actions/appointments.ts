@@ -83,8 +83,8 @@ export async function createAppointmentAction(formData: FormData) {
       user.id,
     );
     await audit({ userId: user.id, action: "appointment.create", entity: "Appointment", entityId: appt.id, branchId: appt.branchId, after: appt, ip: await getClientIp() });
-    revalidatePath("/agenda");
-    revalidatePath(`/pacientes/${appt.patientId}`);
+    revalidatePath("/crm/agenda");
+    revalidatePath(`/crm/pacientes/${appt.patientId}`);
     return { id: appt.id, folio: appt.folio };
   }, "Cita agendada");
 }
@@ -104,7 +104,7 @@ export async function rescheduleAppointmentAction(input: { id: string; startsAt:
     if (d.branchId) assertBranch(user, d.branchId);
     const { before, after } = await rescheduleAppointment(d.id, new Date(d.startsAt), d.branchId);
     await audit({ userId: user.id, action: "appointment.reschedule", entity: "Appointment", entityId: after.id, branchId: after.branchId, before, after, ip: await getClientIp() });
-    revalidatePath("/agenda");
+    revalidatePath("/crm/agenda");
     return undefined;
   }, "Cita reagendada");
 }
@@ -126,8 +126,8 @@ export async function setAppointmentStatusAction(input: { id: string; status: st
     await loadScoped(d.id, user);
     const { before, after } = await setAppointmentStatus(d.id, d.status, d.reason);
     await audit({ userId: user.id, action: `appointment.status.${d.status.toLowerCase()}`, entity: "Appointment", entityId: after.id, branchId: after.branchId, before, after, ip: await getClientIp() });
-    revalidatePath("/agenda");
-    revalidatePath(`/pacientes/${after.patientId}`);
+    revalidatePath("/crm/agenda");
+    revalidatePath(`/crm/pacientes/${after.patientId}`);
     return undefined;
   }, parsed.success ? STATUS_MESSAGES[parsed.data.status] : undefined);
 }
@@ -153,7 +153,7 @@ export async function updateAppointmentAction(formData: FormData) {
       });
     });
     await audit({ userId: user.id, action: "appointment.update", entity: "Appointment", entityId: after.id, branchId: after.branchId, before, after, ip: await getClientIp() });
-    revalidatePath("/agenda");
+    revalidatePath("/crm/agenda");
     return undefined;
   }, "Cita actualizada");
 }

@@ -44,14 +44,14 @@ export async function saveQuoteAction(quoteId: string | null, raw: unknown) {
       let quote = await updateDraftQuote(quoteId, draft, actor);
       if (input.status === "SENT") quote = await db.quote.update({ where: { id: quoteId }, data: { status: "SENT" }, include: { items: true } });
       await audit({ userId: user.id, action: "quote.update", entity: "Quote", entityId: quote.id, branchId: quote.branchId, summary: quote.folio, before, after: quote, ip });
-      revalidatePath("/cotizaciones");
-      revalidatePath(`/cotizaciones/${quote.id}`);
+      revalidatePath("/crm/cotizaciones");
+      revalidatePath(`/crm/cotizaciones/${quote.id}`);
       return { id: quote.id, folio: quote.folio };
     }
 
     const quote = await createQuote({ ...draft, status: input.status, source: "WALK_IN" }, actor);
     await audit({ userId: user.id, action: "quote.create", entity: "Quote", entityId: quote.id, branchId: quote.branchId, summary: quote.folio, after: quote, ip });
-    revalidatePath("/cotizaciones");
+    revalidatePath("/crm/cotizaciones");
     return { id: quote.id, folio: quote.folio };
   });
 }
@@ -65,8 +65,8 @@ export async function setQuoteStatusAction(quoteId: string, to: string) {
     if (input.to !== "REJECTED" && quote.validUntil < new Date()) throw new BusinessError("La cotización ya venció. Genera una nueva con los precios vigentes.");
     const after = await db.quote.update({ where: { id: quote.id }, data: { status: input.to } });
     await audit({ userId: user.id, action: "quote.status", entity: "Quote", entityId: quote.id, branchId: quote.branchId, summary: `${quote.status} → ${after.status}`, before: { status: quote.status }, after: { status: after.status }, ip: await getClientIp() });
-    revalidatePath("/cotizaciones");
-    revalidatePath(`/cotizaciones/${quote.id}`);
+    revalidatePath("/crm/cotizaciones");
+    revalidatePath(`/crm/cotizaciones/${quote.id}`);
     return undefined;
   }, "Estado actualizado");
 }
@@ -80,9 +80,9 @@ export async function convertQuoteAction(quoteId: string) {
     if (created) {
       await audit({ userId: user.id, action: "order.create_from_quote", entity: "Order", entityId: order.id, branchId: order.branchId, summary: order.folio, after: order, ip: await getClientIp() });
     }
-    revalidatePath("/cotizaciones");
-    revalidatePath(`/cotizaciones/${quoteId}`);
-    revalidatePath("/ordenes");
+    revalidatePath("/crm/cotizaciones");
+    revalidatePath(`/crm/cotizaciones/${quoteId}`);
+    revalidatePath("/crm/ordenes");
     return { orderId: order.id, folio: order.folio, created };
   });
 }
@@ -97,7 +97,7 @@ export async function logQuoteWhatsAppAction(quoteId: string, markSent: boolean)
       await db.patientInteraction.create({ data: { patientId: quote.patientId, type: "WHATSAPP", summary: `Se preparó mensaje de WhatsApp con la cotización ${quote.folio}.`, userId: user.id } });
     }
     await audit({ userId: user.id, action: "quote.whatsapp_prepared", entity: "Quote", entityId: quote.id, branchId: quote.branchId, summary: quote.folio, ip: await getClientIp() });
-    revalidatePath(`/cotizaciones/${quote.id}`);
+    revalidatePath(`/crm/cotizaciones/${quote.id}`);
     return undefined;
   });
 }

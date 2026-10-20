@@ -1,0 +1,843 @@
+// IBANOCHE CRM — modelo de datos administrativo y comercial.
+//
+// Este sistema NO es clínico: no existen campos para resultados, valores
+// analíticos, diagnósticos, tratamientos ni interpretaciones médicas.
+// Importes en centavos (Int) para evitar errores de redondeo.
+// Porcentajes en puntos base (Int): 1000 = 10.00 %.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────── Seguridad y organización ─────────────────────────
+
+enum RoleKey {
+  ADMIN
+  RECEPTION
+  CASHIER
+  SALES
+  SUPERVISOR
+  READ_ONLY
+}
+
+model Role {
+  id             String   @id @default(cuid())
+  key            RoleKey  @unique
+  name           String
+  description    String?
+  permissions    String[]
+  maxDiscountBps Int      @default(0)
+  users          User[]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Branch {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  address   String?
+  phone     String?
+  active    Boolean  @default(true)
+  isDemo    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users         UserBranch[]
+  schedules     BranchSchedule[]
+  patients      Patient[]
+  appointments  Appointment[]
+  quotes        Quote[]
+  orders        Order[]
+  payments      Payment[]
+  cashSessions  CashRegisterSession[]
+  opportunities Opportunity[]
+  partners      Partner[]
+  conversations Conversation[]
+}
+
+model BranchSchedule {
+  id          String  @id @default(cuid())
+  branchId    String
+  branch      Branch  @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  weekday     Int // 0 = domingo … 6 = sábado
+  opensAt     String // "07:00" hora local
+  closesAt    String // "14:00" hora local
+  slotMinutes Int     @default(30)
+  capacity    Int     @default(2) // citas simultáneas por intervalo
+  homeService Boolean @default(false)
+  active      Boolean @default(true)
+
+  @@unique([branchId, weekday])
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  name            String
+  passwordHash    String
+  roleId          String
+  role            Role      @relation(fields: [roleId], references: [id])
+  active          Boolean   @default(true)
+  isDemo          Boolean   @default(false)
+  failedLogins    Int       @default(0)
+  lockedUntil     DateTime?
+  lastLoginAt     DateTime?
+  defaultBranchId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  branches              UserBranch[]
+  sessions              Session[]
+  auditLogs             AuditLog[]
+  notifications         Notification[]
+  appointmentsAssigned  Appointment[]         @relation("AppointmentResponsible")
+  appointmentsCreated   Appointment[]         @relation("AppointmentCreator")
+  quotes                Quote[]
+  orders                Order[]
+  orderEvents           OrderEvent[]
+  payments              Payment[]
+  cashOpened            CashRegisterSession[] @relation("CashOpenedBy")
+  cashClosed            CashRegisterSession[] @relation("CashClosedBy")
+  opportunities         Opportunity[]
+  partners              Partner[]
+  interactions          PatientInteraction[]
+  conversationsAssigned Conversation[]
+  messages              Message[]
+  pricesCreated         StudyPrice[]
+}
+
+model UserBranch {
+  userId   String
+  branchId String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  @@id([userId, branchId])
+}
+
+/// El id es el hash SHA-256 del token de la cookie: el token nunca se guarda.
+model Session {
+  id             String   @id
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeBranchId String?
+  expiresAt      DateTime
+  ip             String?
+  userAgent      String?
+  createdAt      DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ───────────────────────────────── Pacientes ─────────────────────────────────
+
+enum PatientStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PatientType {
+  PARTICULAR
+  CONVENIO
+  EMPRESA
+  OTRO
+}
+
+enum ContactSource {
+  WALK_IN
+  PHONE
+  WHATSAPP
+  WEBSITE
+  EMILIA
+  REFERRAL
+  OTHER
+}
+
+model Patient {
+  id              String        @id @default(cuid())
+  folio           String        @unique
+  firstName       String
+  lastName        String
+  secondLastName  String?
+  birthDate       DateTime?     @db.Date
+  phone           String?
+  phoneNormalized String?
+  email           String?
+  emailNormalized String?
+  type            PatientType   @default(PARTICULAR)
+  status          PatientStatus @default(ACTIVE)
+  source          ContactSource @default(WALK_IN)
+  branchId        String
+  branch          Branch        @relation(fields: [branchId], references: [id])
+  partnerId       String?
+  partner         Partner?      @relation(fields: [partnerId], references: [id])
+  // Autorización de contacto (privacidad)
+  contactConsent  Boolean       @default(false)
+  consentAt       DateTime?
+  prefersWhatsApp Boolean       @default(true)
+  prefersEmail    Boolean       @default(false)
+  prefersPhone    Boolean       @default(false)
+  adminNotes      String?
+  lastVisitAt     DateTime?
+  isDemo          Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  appointments  Appointment[]
+  quotes        Quote[]
+  orders        Order[]
+  interactions  PatientInteraction[]
+  conversations Conversation[]
+  opportunities Opportunity[]
+
+  @@index([branchId])
+  @@index([phoneNormalized])
+  @@index([emailNormalized])
+  @@index([lastName, firstName])
+}
+
+enum InteractionType {
+  CALL
+  WHATSAPP
+  EMAIL
+  VISIT
+  NOTE
+}
+
+model PatientInteraction {
+  id        String          @id @default(cuid())
+  patientId String
+  patient   Patient         @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  type      InteractionType
+  summary   String
+  userId    String?
+  user      User?           @relation(fields: [userId], references: [id])
+  createdAt DateTime        @default(now())
+
+  @@index([patientId, createdAt])
+}
+
+// ──────────────────────────────── Catálogo ────────────────────────────────
+
+model StudyCategory {
+  id        String  @id @default(cuid())
+  key       String  @unique
+  name      String
+  sortOrder Int     @default(0)
+  studies   Study[]
+}
+
+model Study {
+  id                   String        @id @default(cuid())
+  code                 String        @unique
+  name                 String
+  synonyms             String[]
+  categoryId           String
+  category             StudyCategory @relation(fields: [categoryId], references: [id])
+  sampleType           String?
+  sampleTypeValidated  Boolean       @default(false)
+  instructions         String?
+  instructionsApproved Boolean       @default(false)
+  turnaround           String?
+  turnaroundConfirmed  Boolean       @default(false)
+  active               Boolean       @default(true)
+  isDemo               Boolean       @default(false)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  prices             StudyPrice[]
+  quoteItems         QuoteItem[]
+  orderItems         OrderItem[]
+  appointmentStudies AppointmentStudy[]
+
+  @@index([categoryId])
+  @@index([name])
+}
+
+enum PriceKind {
+  PUBLIC
+  INTERNAL_COST
+}
+
+/// Tarifas versionadas: la vigente tiene validTo = null. Nunca se editan, se reemplazan.
+model StudyPrice {
+  id          String    @id @default(cuid())
+  studyId     String
+  study       Study     @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  kind        PriceKind
+  amountCents Int
+  currency    String    @default("MXN")
+  validFrom   DateTime  @default(now())
+  validTo     DateTime?
+  reason      String?
+  createdById String?
+  createdBy   User?     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+
+  @@index([studyId, kind, validTo])
+}
+
+model Promotion {
+  id          String    @id @default(cuid())
+  name        String
+  discountBps Int
+  active      Boolean   @default(true)
+  validFrom   DateTime?
+  validTo     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  quotes      Quote[]
+  orders      Order[]
+}
+
+// ────────────────────────────── Agenda ──────────────────────────────
+
+enum AppointmentType {
+  BRANCH
+  HOME
+}
+
+enum AppointmentStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model Appointment {
+  id            String            @id @default(cuid())
+  folio         String            @unique
+  patientId     String
+  patient       Patient           @relation(fields: [patientId], references: [id])
+  branchId      String
+  branch        Branch            @relation(fields: [branchId], references: [id])
+  startsAt      DateTime
+  endsAt        DateTime
+  type          AppointmentType   @default(BRANCH)
+  status        AppointmentStatus @default(PENDING)
+  homeAddress   String?
+  notes         String?
+  cancelReason  String?
+  responsibleId String?
+  responsible   User?             @relation("AppointmentResponsible", fields: [responsibleId], references: [id])
+  createdById   String?
+  createdBy     User?             @relation("AppointmentCreator", fields: [createdById], references: [id])
+  source        ContactSource     @default(WALK_IN)
+  isDemo        Boolean           @default(false)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  studies AppointmentStudy[]
+
+  @@index([branchId, startsAt])
+  @@index([patientId, startsAt])
+  @@index([status])
+}
+
+model AppointmentStudy {
+  appointmentId String
+  studyId       String
+  appointment   Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  study         Study       @relation(fields: [studyId], references: [id])
+
+  @@id([appointmentId, studyId])
+}
+
+// ─────────────────────────── Cotizaciones y órdenes ───────────────────────────
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  FOLLOW_UP
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+model Quote {
+  id            String        @id @default(cuid())
+  folio         String        @unique
+  patientId     String?
+  patient       Patient?      @relation(fields: [patientId], references: [id])
+  prospectName  String?
+  prospectPhone String?
+  branchId      String
+  branch        Branch        @relation(fields: [branchId], references: [id])
+  responsibleId String?
+  responsible   User?         @relation(fields: [responsibleId], references: [id])
+  status        QuoteStatus   @default(DRAFT)
+  issuedAt      DateTime      @default(now())
+  validUntil    DateTime
+  subtotalCents Int
+  discountBps   Int           @default(0)
+  discountCents Int           @default(0)
+  totalCents    Int
+  promotionId   String?
+  promotion     Promotion?    @relation(fields: [promotionId], references: [id])
+  notes         String?
+  source        ContactSource @default(WALK_IN)
+  isDemo        Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  items         QuoteItem[]
+  order         Order?
+  opportunities Opportunity[]
+
+  @@index([branchId, status])
+  @@index([patientId])
+  @@index([issuedAt])
+}
+
+/// Snapshot: el precio aplicado se conserva aunque la tarifa cambie después.
+model QuoteItem {
+  id             String @id @default(cuid())
+  quoteId        String
+  quote          Quote  @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  studyId        String
+  study          Study  @relation(fields: [studyId], references: [id])
+  studyCode      String
+  studyName      String
+  unitPriceCents Int
+  quantity       Int
+  lineTotalCents Int
+
+  @@index([quoteId])
+}
+
+enum OrderStatus {
+  DRAFT
+  CONFIRMED
+  PAID
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  REFUNDED
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  folio         String        @unique
+  patientId     String
+  patient       Patient       @relation(fields: [patientId], references: [id])
+  branchId      String
+  branch        Branch        @relation(fields: [branchId], references: [id])
+  quoteId       String?       @unique
+  quote         Quote?        @relation(fields: [quoteId], references: [id])
+  status        OrderStatus   @default(DRAFT)
+  paymentStatus PaymentStatus @default(UNPAID)
+  subtotalCents Int
+  discountBps   Int           @default(0)
+  discountCents Int           @default(0)
+  totalCents    Int
+  paidCents     Int           @default(0)
+  promotionId   String?
+  promotion     Promotion?    @relation(fields: [promotionId], references: [id])
+  responsibleId String?
+  responsible   User?         @relation(fields: [responsibleId], references: [id])
+  notes         String?
+  isDemo        Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  items          OrderItem[]
+  events         OrderEvent[]
+  payments       Payment[]
+  invoiceRequest InvoiceRequest?
+
+  @@index([branchId, status])
+  @@index([patientId])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id             String @id @default(cuid())
+  orderId        String
+  order          Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  studyId        String
+  study          Study  @relation(fields: [studyId], references: [id])
+  studyCode      String
+  studyName      String
+  unitPriceCents Int
+  quantity       Int
+  lineTotalCents Int
+
+  @@index([orderId])
+}
+
+/// Bitácora administrativa de la orden (cambios de estado, notas).
+model OrderEvent {
+  id         String       @id @default(cuid())
+  orderId    String
+  order      Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type       String
+  fromStatus OrderStatus?
+  toStatus   OrderStatus?
+  note       String?
+  userId     String?
+  user       User?        @relation(fields: [userId], references: [id])
+  createdAt  DateTime     @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+// ──────────────────────────────── Caja / POS ────────────────────────────────
+
+enum PaymentMethod {
+  CASH
+  CARD
+  TRANSFER
+}
+
+enum PaymentKind {
+  PAYMENT
+  ADVANCE
+  REFUND
+}
+
+enum PaymentRecordStatus {
+  REGISTERED
+  VOIDED
+}
+
+model Payment {
+  id             String               @id @default(cuid())
+  folio          String               @unique
+  groupId        String // agrupa los movimientos de un pago mixto
+  orderId        String
+  order          Order                @relation(fields: [orderId], references: [id])
+  branchId       String
+  branch         Branch               @relation(fields: [branchId], references: [id])
+  cashSessionId  String?
+  cashSession    CashRegisterSession? @relation(fields: [cashSessionId], references: [id])
+  method         PaymentMethod
+  kind           PaymentKind          @default(PAYMENT)
+  amountCents    Int
+  reference      String?
+  status         PaymentRecordStatus  @default(REGISTERED)
+  idempotencyKey String
+  receivedById   String?
+  receivedBy     User?                @relation(fields: [receivedById], references: [id])
+  isDemo         Boolean              @default(false)
+  createdAt      DateTime             @default(now())
+
+  @@unique([idempotencyKey, method])
+  @@index([branchId, createdAt])
+  @@index([orderId])
+  @@index([groupId])
+}
+
+enum CashSessionStatus {
+  OPEN
+  CLOSED
+}
+
+/// Solo puede existir una caja abierta por sucursal (índice parcial en la migración).
+model CashRegisterSession {
+  id                String            @id @default(cuid())
+  branchId          String
+  branch            Branch            @relation(fields: [branchId], references: [id])
+  status            CashSessionStatus @default(OPEN)
+  openedById        String
+  openedBy          User              @relation("CashOpenedBy", fields: [openedById], references: [id])
+  openedAt          DateTime          @default(now())
+  openingCents      Int
+  closedById        String?
+  closedBy          User?             @relation("CashClosedBy", fields: [closedById], references: [id])
+  closedAt          DateTime?
+  expectedCashCents Int?
+  countedCashCents  Int?
+  differenceCents   Int?
+  notes             String?
+  payments          Payment[]
+
+  @@index([branchId, status])
+}
+
+enum InvoiceRequestStatus {
+  PENDING
+  ISSUED
+  CANCELLED
+}
+
+model InvoiceRequest {
+  id        String               @id @default(cuid())
+  orderId   String               @unique
+  order     Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  rfc       String
+  legalName String
+  taxRegime String
+  zipCode   String
+  cfdiUse   String
+  email     String
+  status    InvoiceRequestStatus @default(PENDING)
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+}
+
+// ─────────────────────────────── Emilia IA ───────────────────────────────
+
+enum ConversationStatus {
+  OPEN
+  PENDING
+  TRANSFERRED
+  CLOSED
+}
+
+enum ConversationChannel {
+  WHATSAPP
+  WEBSITE
+}
+
+enum MessageSender {
+  CONTACT
+  EMILIA
+  AGENT
+  SYSTEM
+}
+
+model Conversation {
+  id            String              @id @default(cuid())
+  channel       ConversationChannel @default(WHATSAPP)
+  contactName   String
+  contactPhone  String?
+  patientId     String?
+  patient       Patient?            @relation(fields: [patientId], references: [id])
+  branchId      String?
+  branch        Branch?             @relation(fields: [branchId], references: [id])
+  status        ConversationStatus  @default(OPEN)
+  intent        String?
+  assignedToId  String?
+  assignedTo    User?               @relation(fields: [assignedToId], references: [id])
+  handoffReason String?
+  lastMessageAt DateTime            @default(now())
+  isSimulated   Boolean             @default(false)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  messages Message[]
+
+  @@index([status, lastMessageAt])
+}
+
+model Message {
+  id             String        @id @default(cuid())
+  conversationId String
+  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         MessageSender
+  body           String
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id])
+  createdAt      DateTime      @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+/// Credenciales de integraciones (Emilia). Solo se guarda el hash de la llave.
+model ApiClient {
+  id         String    @id @default(cuid())
+  name       String
+  keyPrefix  String
+  keyHash    String    @unique
+  scopes     String[]
+  branchId   String?
+  active     Boolean   @default(true)
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+  revokedAt  DateTime?
+}
+
+/// Evita procesar dos veces la misma solicitud de la API.
+model IdempotencyRecord {
+  key       String   @id
+  scope     String
+  response  Json
+  createdAt DateTime @default(now())
+}
+
+// ─────────────────────────── Comercial ───────────────────────────
+
+enum OpportunityStage {
+  PROSPECT
+  CONTACTED
+  QUOTED
+  FOLLOW_UP
+  WON
+  LOST
+}
+
+enum ClientType {
+  PATIENT
+  DOCTOR
+  CLINIC
+  HOSPITAL
+  COMPANY
+  SCHOOL
+  INSTITUTION
+}
+
+model Opportunity {
+  id             String           @id @default(cuid())
+  title          String
+  prospectName   String
+  prospectPhone  String?
+  clientType     ClientType
+  estimatedCents Int              @default(0)
+  stage          OpportunityStage @default(PROSPECT)
+  position       Int              @default(0)
+  ownerId        String?
+  owner          User?            @relation(fields: [ownerId], references: [id])
+  branchId       String
+  branch         Branch           @relation(fields: [branchId], references: [id])
+  patientId      String?
+  patient        Patient?         @relation(fields: [patientId], references: [id])
+  partnerId      String?
+  partner        Partner?         @relation(fields: [partnerId], references: [id])
+  quoteId        String?
+  quote          Quote?           @relation(fields: [quoteId], references: [id])
+  source         ContactSource    @default(OTHER)
+  nextFollowUpAt DateTime?
+  notes          String?
+  lostReason     String?
+  stageChangedAt DateTime         @default(now())
+  closedAt       DateTime?
+  isDemo         Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([stage, position])
+  @@index([branchId])
+}
+
+enum PartnerType {
+  DOCTOR
+  CLINIC
+  HOSPITAL
+  COMPANY
+  SCHOOL
+  INSTITUTION
+}
+
+enum PartnerStatus {
+  PROSPECT
+  NEGOTIATION
+  ACTIVE
+  INACTIVE
+}
+
+model Partner {
+  id           String        @id @default(cuid())
+  organization String
+  contactName  String
+  phone        String?
+  email        String?
+  type         PartnerType
+  status       PartnerStatus @default(PROSPECT)
+  ownerId      String?
+  owner        User?         @relation(fields: [ownerId], references: [id])
+  branchId     String?
+  branch       Branch?       @relation(fields: [branchId], references: [id])
+  startDate    DateTime?
+  notes        String?
+  isDemo       Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  agreements    Agreement[]
+  patients      Patient[]
+  opportunities Opportunity[]
+
+  @@index([type, status])
+}
+
+enum AgreementStatus {
+  DRAFT
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+model Agreement {
+  id          String          @id @default(cuid())
+  partnerId   String
+  partner     Partner         @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  name        String
+  discountBps Int             @default(0)
+  validFrom   DateTime
+  validTo     DateTime?
+  status      AgreementStatus @default(DRAFT)
+  terms       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+// ─────────────────────────── Sistema ───────────────────────────
+
+enum ActorType {
+  USER
+  EMILIA
+  SYSTEM
+}
+
+model AuditLog {
+  id        String    @id @default(cuid())
+  actorType ActorType @default(USER)
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  branchId  String?
+  summary   String?
+  before    Json?
+  after     Json?
+  ip        String?
+  createdAt DateTime  @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@index([userId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  branchId  String?
+  title     String
+  body      String
+  level     String    @default("info") // info | warning | success
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+}
+
+model SystemSetting {
+  key         String   @id
+  value       Json
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+}
+
+/// Contadores atómicos para folios legibles (COT-2026-000123).
+model Counter {
+  key   String @id
+  value Int    @default(0)
+}

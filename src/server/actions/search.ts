@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { can, requireUser, scopeBranchIds } from "@/lib/auth/guard";
-import { fullName, normalizePhone } from "@/lib/utils";
+import { fullName, normalizePhone, searchTextWhere } from "@/lib/utils";
 
 export type SearchHit = { type: "patient" | "study" | "quote" | "order"; id: string; title: string; subtitle: string; href: string };
 
@@ -19,13 +19,7 @@ export async function globalSearchAction(raw: string): Promise<SearchHit[]> {
     const patients = await db.patient.findMany({
       where: {
         branchId: { in: branchIds },
-        OR: [
-          { firstName: { contains: q, mode: "insensitive" } },
-          { lastName: { contains: q, mode: "insensitive" } },
-          { folio: { contains: q, mode: "insensitive" } },
-          { emailNormalized: { contains: q.toLowerCase() } },
-          ...(phone && phone.length >= 4 ? [{ phoneNormalized: { contains: phone } }] : []),
-        ],
+        OR: [searchTextWhere(q), ...(phone && phone.length >= 4 ? [{ phoneNormalized: { contains: phone } }] : [])],
       },
       take: 5,
       orderBy: { updatedAt: "desc" },
@@ -34,7 +28,7 @@ export async function globalSearchAction(raw: string): Promise<SearchHit[]> {
   }
   if (can(user, "catalog.view")) {
     const studies = await db.study.findMany({
-      where: { OR: [{ name: { contains: q, mode: "insensitive" } }, { code: { contains: q, mode: "insensitive" } }, { synonyms: { has: q.toLowerCase() } }] },
+      where: searchTextWhere(q),
       take: 4,
       include: { category: true },
     });

@@ -9,6 +9,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { PrismaClient, type Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { ROLE_DEFINITIONS } from "../src/lib/auth/permissions";
+import { patientSearchText, studySearchText } from "../src/lib/utils";
 
 const db = new PrismaClient();
 const DEMO_PASSWORD = "Demo2026!";
@@ -216,6 +217,7 @@ async function main() {
         code,
         name,
         synonyms,
+        searchText: studySearchText({ code, name, synonyms }),
         categoryId: catIds[cat],
         isDemo: true,
         active: code !== "DEMO-HE05",
@@ -326,7 +328,10 @@ async function main() {
         createdAt,
       },
     });
-    if (p.email) await db.patient.update({ where: { id: p.id }, data: { emailNormalized: p.email.toLowerCase() } });
+    await db.patient.update({
+      where: { id: p.id },
+      data: { emailNormalized: p.email?.toLowerCase() ?? null, searchText: patientSearchText({ ...p, emailNormalized: p.email?.toLowerCase() ?? null }) },
+    });
     patients.push({ id: p.id, branchId, name: `${firstName} ${lastName}`, phone });
     if (chance(0.5)) {
       await db.patientInteraction.create({

@@ -2,7 +2,7 @@ import "server-only";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { nextPatientFolio } from "@/lib/folio";
-import { normalizeEmail, normalizePhone } from "@/lib/utils";
+import { normalizeEmail, normalizePhone, patientSearchText } from "@/lib/utils";
 import type { PatientInput } from "@/lib/validation/patient";
 
 export type DuplicateCandidate = { id: string; folio: string; name: string; phone: string | null; email: string | null; reason: string };
@@ -61,8 +61,9 @@ function toData(input: PatientInput) {
 export async function createPatient(input: PatientInput) {
   return db.$transaction(async (tx) => {
     const folio = await nextPatientFolio(tx);
+    const data = toData(input);
     return tx.patient.create({
-      data: { ...toData(input), folio, contactConsent: input.contactConsent, consentAt: input.contactConsent ? new Date() : null },
+      data: { ...data, folio, searchText: patientSearchText({ ...data, folio }), contactConsent: input.contactConsent, consentAt: input.contactConsent ? new Date() : null },
     });
   });
 }
@@ -70,10 +71,12 @@ export async function createPatient(input: PatientInput) {
 export async function updatePatient(id: string, input: PatientInput) {
   const before = await db.patient.findUniqueOrThrow({ where: { id } });
   const consentChanged = before.contactConsent !== input.contactConsent;
+  const data = toData(input);
   const after = await db.patient.update({
     where: { id },
     data: {
-      ...toData(input),
+      ...data,
+      searchText: patientSearchText({ ...data, folio: before.folio }),
       contactConsent: input.contactConsent,
       consentAt: consentChanged ? (input.contactConsent ? new Date() : null) : before.consentAt,
     },

@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { can, requirePage, resolveBranchFilter } from "@/lib/auth/guard";
 import { formatDate } from "@/lib/dates";
 import { PATIENT_STATUS, PATIENT_TYPE } from "@/lib/labels";
-import { fullName, normalizePhone } from "@/lib/utils";
+import { fullName, normalizePhone, searchTextWhere } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Avatar } from "@/components/ui/misc";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -38,15 +38,7 @@ export default async function PatientsPage({ searchParams }: { searchParams: Pro
     ...(q
       ? {
           OR: [
-            ...q.split(/\s+/).map((w) => ({
-              OR: [
-                { firstName: { contains: w, mode: "insensitive" as const } },
-                { lastName: { contains: w, mode: "insensitive" as const } },
-                { secondLastName: { contains: w, mode: "insensitive" as const } },
-              ],
-            })),
-            { folio: { contains: q, mode: "insensitive" } },
-            { emailNormalized: { contains: q.toLowerCase() } },
+            searchTextWhere(q),
             ...(phone && phone.length >= 4 ? [{ phoneNormalized: { contains: phone } }] : []),
           ],
         }

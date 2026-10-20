@@ -38,3 +38,26 @@ export function normalizeText(s: string) {
     .replace(/[̀-ͯ]/g, "")
     .trim();
 }
+
+/** Texto de búsqueda de un estudio (debe coincidir con la migración search_text). */
+export function studySearchText(s: { code: string; name: string; synonyms: string[] }) {
+  return normalizeText([s.code, s.name, ...s.synonyms].join(" "));
+}
+
+/** Texto de búsqueda de un paciente. */
+export function patientSearchText(p: {
+  firstName: string;
+  lastName: string;
+  secondLastName?: string | null;
+  folio: string;
+  phoneNormalized?: string | null;
+  emailNormalized?: string | null;
+}) {
+  return normalizeText([p.firstName, p.lastName, p.secondLastName, p.folio, p.phoneNormalized, p.emailNormalized].filter(Boolean).join(" "));
+}
+
+/** Condición de búsqueda: cada palabra debe aparecer en searchText. */
+export function searchTextWhere(q: string) {
+  const words = normalizeText(q).split(/\s+/).filter(Boolean).slice(0, 6);
+  return { AND: words.map((w) => ({ searchText: { contains: w } })) };
+}

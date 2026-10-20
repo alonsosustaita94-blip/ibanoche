@@ -185,6 +185,8 @@ model Patient {
   prefersEmail    Boolean       @default(false)
   prefersPhone    Boolean       @default(false)
   adminNotes      String?
+  /// Nombre, folio, teléfono y correo normalizados (sin acentos) para búsquedas.
+  searchText      String        @default("")
   lastVisitAt     DateTime?
   isDemo          Boolean       @default(false)
   createdAt       DateTime      @default(now())
@@ -247,6 +249,8 @@ model Study {
   instructionsApproved Boolean       @default(false)
   turnaround           String?
   turnaroundConfirmed  Boolean       @default(false)
+  /// Código, nombre y sinónimos normalizados (sin acentos) para búsquedas.
+  searchText           String        @default("")
   active               Boolean       @default(true)
   isDemo               Boolean       @default(false)
   createdAt            DateTime      @default(now())

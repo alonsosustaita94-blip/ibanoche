@@ -61,7 +61,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   right(page, quote.folio, 612 - M, 737, regular, 10, rgb(0.9, 0.95, 1));
 
   let y = 680;
-  const demo = process.env.NEXT_PUBLIC_DEMO_MODE === "true" || quote.isDemo;
+  const demo = process.env.NEXT_PUBLIC_DEMO_MODE !== "false" || quote.isDemo;
   if (demo) {
     page.drawRectangle({ x: M, y: y - 6, width: W, height: 20, color: rgb(0.99, 0.96, 0.89) });
     text(page, "Documento de demostración: datos y precios ficticios, sin validez comercial.", M + 8, y, bold, 8.5, rgb(0.79, 0.54, 0.07));

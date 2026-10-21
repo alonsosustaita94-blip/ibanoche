@@ -27,7 +27,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ groupI
   const order = await db.order.findUniqueOrThrow({ where: { id: payments[0].orderId }, include: { items: true, patient: true, branch: true } });
   const groupTotal = payments.filter((p) => p.status === "REGISTERED").reduce((a, p) => a + p.amountCents, 0);
   const balance = Math.max(0, order.totalCents - order.paidCents);
-  const demo = process.env.NEXT_PUBLIC_DEMO_MODE === "true" || order.isDemo;
+  const demo = process.env.NEXT_PUBLIC_DEMO_MODE !== "false" || order.isDemo;
 
   return (
     <div className="grid gap-6">

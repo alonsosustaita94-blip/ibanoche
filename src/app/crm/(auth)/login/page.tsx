@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Iniciar sesión" };
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   if (await getSessionUser()) redirect("/crm/dashboard");
   const { next } = await searchParams;
-  const demo = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+  const demo = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
 
   return (
     <div className="grid min-h-dvh lg:grid-cols-[1.05fr_1fr]">

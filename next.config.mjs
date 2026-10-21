@@ -1,14 +1,22 @@
 /** @type {import('next').NextConfig} */
-const basePath = process.env.BASE_PATH || "";
+const securityHeaders = [
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+];
 
 const nextConfig = {
   reactStrictMode: true,
-  images: { unoptimized: true },
-  // BASE_PATH permite publicar el sitio en una subruta (p. ej. GitHub Pages: /disruptors-).
-  basePath,
-  env: { NEXT_PUBLIC_BASE_PATH: basePath },
-  // STATIC_EXPORT=1 genera una versión estática en /out para cualquier hosting de archivos.
-  ...(process.env.STATIC_EXPORT === "1" ? { output: "export", trailingSlash: true } : {}),
+  poweredByHeader: false,
+  serverExternalPackages: ["bcryptjs"],
+  // Dominios adicionales desde los que se aceptan acciones de servidor (p. ej. un proxy como GitHub Codespaces).
+  experimental: {
+    serverActions: { allowedOrigins: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",") : [] },
+  },
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
+  },
 };
 
 export default nextConfig;

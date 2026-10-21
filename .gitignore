@@ -3,5 +3,8 @@ node_modules
 out
 next-env.d.ts
 *.tsbuildinfo
+.env
 .env*.local
+coverage
+test-results
 .DS_Store

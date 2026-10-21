@@ -3,24 +3,57 @@
 @tailwind utilities;
 
 @layer base {
-  html {
-    scroll-behavior: smooth;
-    -webkit-text-size-adjust: 100%;
+  :root {
+    --background: 210 33% 97%; /* #F4F7FA */
+    --foreground: 215 59% 19%; /* tinta azul profunda */
+    --card: 0 0% 100%;
+    --card-foreground: 215 59% 19%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 59% 19%;
+    --primary: 211 79% 34%; /* #12549A */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 182 58% 47%; /* #32B8BE */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 33% 96%;
+    --muted-foreground: 216 18% 43%; /* #596A82 */
+    --accent: 210 60% 95%;
+    --accent-foreground: 211 79% 34%;
+    --destructive: 354 77% 59%; /* #E74758 */
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 90%;
+    --input: 214 32% 88%;
+    --ring: 182 58% 47%;
+    --radius: 14px;
+    --select-chevron: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23596A82' stroke-width='2'><path d='m6 9 6 6 6-6'/></svg>");
+  }
+
+  * {
+    @apply border-border;
   }
   body {
-    @apply bg-white font-sans text-[1rem] leading-relaxed text-brand-text antialiased;
+    @apply bg-background font-sans text-[0.9rem] text-foreground antialiased;
   }
   h1,
   h2,
-  h3 {
+  h3,
+  h4 {
+    @apply font-display;
     text-wrap: balance;
-  }
-  :focus-visible {
-    outline-color: #32b8be;
   }
 }
 
 @layer components {
+  /* Flecha de los selectores nativos (fuera de las utilidades para que tailwind-merge no la confunda). */
+  .select-chevron {
+    background-image: var(--select-chevron);
+    background-size: 16px;
+    background-position: right 10px center;
+    background-repeat: no-repeat;
+  }
+}
+
+@layer components {
+  /* ── Sitio web público ── */
   /* Subrayado animado del menú activo */
   .nav-link {
     position: relative;
@@ -65,13 +98,27 @@
   }
 }
 
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
   }
 }

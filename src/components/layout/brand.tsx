@@ -1,30 +1,52 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-/** Marca del producto. Logotipo tipográfico provisional (sustituible por el oficial). */
-export function BrandMark({ inverted = false, compact = false, className }: { inverted?: boolean; compact?: boolean; className?: string }) {
+/**
+ * Logotipo oficial de IBANOCHE en el CRM.
+ * - Normal: versión horizontal a color con la etiqueta "CRM".
+ * - inverted: versión blanca para fondos oscuros.
+ * - compact: solo el símbolo.
+ */
+export function BrandMark({
+  inverted = false,
+  compact = false,
+  size = "md",
+  className,
+}: {
+  inverted?: boolean;
+  compact?: boolean;
+  size?: "md" | "lg";
+  className?: string;
+}) {
+  if (compact) {
+    return (
+      <Image
+        src={inverted ? "/brand/ibanoche-simbolo-blanco.png" : "/brand/ibanoche-simbolo.png"}
+        alt="IBANOCHE"
+        width={283}
+        height={300}
+        className={cn("h-9 w-auto", className)}
+      />
+    );
+  }
   return (
-    <span className={cn("inline-flex items-center gap-2.5", className)}>
+    <span className={cn("inline-flex items-center gap-2", className)}>
+      <Image
+        src={inverted ? "/brand/ibanoche-horizontal-blanco.png" : "/brand/ibanoche-horizontal.png"}
+        alt="IBANOCHE, Laboratorio de Análisis Clínicos"
+        width={1209}
+        height={312}
+        priority
+        className={size === "lg" ? "h-14 w-auto" : "h-10 w-auto"}
+      />
       <span
         className={cn(
-          "relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
-          inverted ? "bg-white/15" : "bg-gradient-to-br from-brand-blue to-brand-turquoise",
+          "rounded-md px-1.5 py-0.5 font-display text-[0.6rem] font-bold tracking-wider",
+          inverted ? "bg-white/20 text-white" : "bg-brand-mint text-[#1f8f94]",
         )}
-        aria-hidden
       >
-        <span className="absolute h-4 w-1.5 rounded-sm bg-white" />
-        <span className="absolute h-1.5 w-4 rounded-sm bg-white" />
-        <span className="absolute bottom-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-brand-coral" />
+        CRM
       </span>
-      {compact ? null : (
-        <span className="flex flex-col leading-none">
-          <span className={cn("font-display text-[1.05rem] font-extrabold tracking-wide", inverted ? "text-white" : "text-brand-blue")}>
-            IBANOCHE <span className={inverted ? "text-brand-mint" : "text-brand-turquoise"}>CRM</span>
-          </span>
-          <span className={cn("mt-1 text-[0.6rem] font-semibold uppercase tracking-[0.14em]", inverted ? "text-white/70" : "text-muted-foreground")}>
-            Laboratorio de análisis clínicos
-          </span>
-        </span>
-      )}
     </span>
   );
 }

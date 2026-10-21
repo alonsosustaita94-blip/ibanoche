@@ -32,7 +32,7 @@ function fit(s: string, font: PDFFont, size: number, max: number) {
   return t === safe(s) ? t : `${t.trimEnd()}…`;
 }
 
-export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await getSessionUser();
   if (!user) return NextResponse.json({ error: "Inicia sesión." }, { status: 401 });
   if (!user.permissions.includes("quotes.view")) return NextResponse.json({ error: "Sin permiso." }, { status: 403 });
@@ -55,8 +55,17 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   // Encabezado
   page.drawRectangle({ x: 0, y: 712, width: 612, height: 80, color: BLUE });
   page.drawRectangle({ x: 0, y: 708, width: 612, height: 4, color: TURQ });
-  text(page, "IBANOCHE", M, 752, bold, 22, rgb(1, 1, 1));
-  text(page, "LABORATORIO DE ANÁLISIS CLÍNICOS", M, 736, regular, 8, rgb(0.85, 0.95, 0.96));
+  // Logotipo oficial (versión blanca); si no se puede cargar, se usa el nombre en texto.
+  try {
+    const res = await fetch(new URL("/brand/ibanoche-horizontal-blanco.png", req.url));
+    if (!res.ok) throw new Error(String(res.status));
+    const logo = await pdf.embedPng(await res.arrayBuffer());
+    const h = 48;
+    page.drawImage(logo, { x: M, y: 728, width: (logo.width / logo.height) * h, height: h });
+  } catch {
+    text(page, "IBANOCHE", M, 752, bold, 22, rgb(1, 1, 1));
+    text(page, "LABORATORIO DE ANÁLISIS CLÍNICOS", M, 736, regular, 8, rgb(0.85, 0.95, 0.96));
+  }
   right(page, "COTIZACIÓN", 612 - M, 754, bold, 16, rgb(1, 1, 1));
   right(page, quote.folio, 612 - M, 737, regular, 10, rgb(0.9, 0.95, 1));
 

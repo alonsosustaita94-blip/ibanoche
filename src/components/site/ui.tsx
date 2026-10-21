@@ -1,23 +1,20 @@
+import Image from "next/image";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import { site } from "@/config/site";
 import { scenes, type SceneName } from "./illustrations";
 
-/** Logotipo tipográfico temporal. Se reemplazará por el logotipo oficial. */
+/** Logotipo oficial (versión horizontal; blanca sobre fondos oscuros). */
 export function Logo({ inverted = false, className = "" }: { inverted?: boolean; className?: string }) {
   return (
-    <span className={`inline-flex flex-col leading-none ${className}`} aria-label={`${site.name}, ${site.tagline}`}>
-      <span
-        className={`font-display text-[1.6rem] font-bold tracking-[0.04em] ${inverted ? "text-white" : "text-brand-blue"}`}
-      >
-        IBANOCHE
-      </span>
-      <span
-        className={`mt-1 font-display text-[0.5rem] font-semibold uppercase tracking-[0.2em] ${inverted ? "text-brand-mint" : "text-brand-turquoise"}`}
-      >
-        • {site.tagline} •
-      </span>
-    </span>
+    <Image
+      src={inverted ? "/brand/ibanoche-horizontal-blanco.png" : "/brand/ibanoche-horizontal.png"}
+      alt={`${site.name}, ${site.tagline}`}
+      width={1209}
+      height={312}
+      priority={!inverted}
+      className={`h-11 w-auto sm:h-12 ${className}`}
+    />
   );
 }
 

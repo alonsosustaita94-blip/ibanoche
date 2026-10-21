@@ -10,14 +10,13 @@ export const metadata: Metadata = { title: "Iniciar sesión" };
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   if (await getSessionUser()) redirect("/crm/dashboard");
   const { next } = await searchParams;
-  const demo = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
 
   return (
     <div className="grid min-h-dvh lg:grid-cols-[1.05fr_1fr]">
       <aside className="relative hidden overflow-hidden bg-gradient-to-br from-brand-blue via-[#155fa8] to-brand-turquoise p-12 text-white lg:flex lg:flex-col">
         <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full border-[40px] border-white/10" aria-hidden />
-        <div className="pointer-events-none absolute -bottom-16 left-24 h-40 w-40 rounded-[3rem] bg-brand-coral/70" aria-hidden />
-        <BrandMark inverted />
+        <div className="pointer-events-none absolute -bottom-20 -right-16 h-48 w-48 rounded-[3rem] bg-brand-coral/60" aria-hidden />
+        <BrandMark inverted size="lg" />
         <div className="mt-auto max-w-md">
           <h1 className="font-display text-4xl font-bold leading-tight">
             Administración y gestión comercial <span className="text-brand-mint">inteligente.</span>
@@ -40,20 +39,6 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <h2 className="mt-8 font-display text-2xl font-bold text-brand-ink">Inicia sesión</h2>
           <p className="mt-1 text-sm text-muted-foreground">Usa tu cuenta del laboratorio.</p>
           <LoginForm next={next} />
-          {demo ? (
-            <div className="mt-8 rounded-xl border border-dashed border-brand-amber/40 bg-brand-amberSoft p-4 text-xs text-brand-ink">
-              <p className="font-display font-bold text-brand-amber">Cuentas de demostración</p>
-              <p className="mt-1 text-muted-foreground">Contraseña para todas: <code className="font-semibold text-brand-ink">Demo2026!</code></p>
-              <ul className="mt-2 grid gap-0.5 font-mono text-[0.7rem]">
-                <li>admin@demo.ibanoche.mx — Administrador</li>
-                <li>recepcion@demo.ibanoche.mx — Recepción</li>
-                <li>caja@demo.ibanoche.mx — Caja</li>
-                <li>comercial@demo.ibanoche.mx — Comercial</li>
-                <li>supervisor@demo.ibanoche.mx — Supervisor</li>
-                <li>lectura@demo.ibanoche.mx — Solo lectura</li>
-              </ul>
-            </div>
-          ) : null}
         </div>
       </main>
     </div>

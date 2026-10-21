@@ -59,7 +59,7 @@ createdb -O ibanoche ibanoche_crm
 
 ### Cuentas de demostración
 
-Contraseña para todas: `Demo2026!`
+La contraseña de todas se define con la variable `DEMO_PASSWORD` al cargar la demo (si falta, se genera una aleatoria y se muestra en la consola). No la publiques en el repositorio.
 
 | Correo | Rol | Sucursales |
 | --- | --- | --- |

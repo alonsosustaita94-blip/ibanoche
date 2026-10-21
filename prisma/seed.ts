@@ -12,7 +12,8 @@ import { ROLE_DEFINITIONS } from "../src/lib/auth/permissions";
 import { patientSearchText, studySearchText } from "../src/lib/utils";
 
 const db = new PrismaClient();
-const DEMO_PASSWORD = "Demo2026!";
+// Contraseña de las cuentas demo: se toma de DEMO_PASSWORD (no se publica en el repositorio).
+const DEMO_PASSWORD = process.env.DEMO_PASSWORD || randomBytes(9).toString("base64url");
 
 // PRNG determinista para que la demo sea reproducible.
 let seed = 20261020;
@@ -661,7 +662,7 @@ async function main() {
   await db.auditLog.create({ data: { actorType: "SYSTEM", action: "seed.demo", entity: "System", summary: "Datos de demostración cargados" } });
 
   console.log("\n✓ Datos de demostración listos.");
-  console.log(`  Usuarios demo: admin@demo.ibanoche.mx (y otros) · contraseña: ${DEMO_PASSWORD}`);
+  console.log(`  Usuarios demo: admin@demo.ibanoche.mx (y otros) · contraseña: ${process.env.DEMO_PASSWORD ? "la definida en DEMO_PASSWORD" : DEMO_PASSWORD}`);
   console.log(`  Llave de API de Emilia (demo): ${apiKey}`);
   console.log(`  Pacientes: ${patients.length} · Órdenes: ${orderN} · Cotizaciones: ${quoteN} · Pagos: ${payN}`);
 }

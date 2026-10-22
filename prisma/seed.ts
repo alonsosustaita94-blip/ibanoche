@@ -155,17 +155,19 @@ async function main() {
   for (const b of branchData) {
     const branch = await db.branch.create({ data: { ...b, isDemo: true } });
     branches.push(branch);
+    const tm4 = b.code === "TM4";
     for (let wd = 0; wd <= 6; wd++) {
-      if (wd === 0) continue; // domingo cerrado
+      // Torres Médicas 4: lunes a domingo 07:00–17:00, un paciente cada 15 minutos.
+      if (wd === 0 && !tm4) continue; // domingo cerrado
       await db.branchSchedule.create({
         data: {
           branchId: branch.id,
           weekday: wd,
           opensAt: "07:00",
-          closesAt: wd === 6 ? "13:00" : "15:00",
-          slotMinutes: 30,
-          capacity: b.code === "TM4" ? 3 : 2,
-          homeService: wd !== 6,
+          closesAt: tm4 ? "17:00" : wd === 6 ? "13:00" : "15:00",
+          slotMinutes: tm4 ? 15 : 30,
+          capacity: tm4 ? 1 : 2,
+          homeService: wd !== 6 && wd !== 0,
         },
       });
     }

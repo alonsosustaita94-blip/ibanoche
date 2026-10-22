@@ -10,6 +10,7 @@ import { cashSessionSummary, closeCashSession, openCashSession, registerPayment,
 import { setPrice } from "@/server/services/pricing";
 import { convertQuoteToOrder, createQuote } from "@/server/services/quotes";
 import { changeOrderStatus } from "@/server/services/orders";
+import { findOrCreatePatientForEmilia } from "@/server/services/patients";
 
 let branchId = "";
 let userId = "";
@@ -153,5 +154,24 @@ describe("caja", () => {
     const { closed } = await closeCashSession(session.id, 59500, userId);
     expect(closed.differenceCents).toBe(-500);
     await expect(closeCashSession(session.id, 0, userId)).rejects.toThrow(/ya está cerrada/);
+  });
+});
+
+describe("pacientes de Emilia", () => {
+  it("reutiliza la ficha con el mismo teléfono y nombre, y separa a otra persona con el mismo teléfono", async () => {
+    const base = { firstName: "Lucía", lastName: "Hernández", phone: "+52 1 222 555 0101", branchId };
+    const a = await findOrCreatePatientForEmilia(base);
+    expect(a.created).toBe(true);
+    expect(a.patient.source).toBe("EMILIA");
+    expect(a.patient.phoneNormalized).toBe("2225550101");
+    expect(a.patient.contactConsent).toBe(false);
+
+    const again = await findOrCreatePatientForEmilia({ ...base, firstName: "lucía", phone: "2225550101" });
+    expect(again.created).toBe(false);
+    expect(again.patient.id).toBe(a.patient.id);
+
+    const child = await findOrCreatePatientForEmilia({ ...base, firstName: "Mateo" });
+    expect(child.created).toBe(true);
+    expect(child.patient.id).not.toBe(a.patient.id);
   });
 });

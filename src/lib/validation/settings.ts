@@ -68,6 +68,7 @@ export const EMILIA_SCOPES = {
   "prices.read": "Consultar precios públicos",
   "quotes.create": "Generar cotizaciones",
   "availability.read": "Consultar disponibilidad",
+  "patients.write": "Registrar pacientes nuevos",
   "appointments.create": "Solicitar citas",
   "leads.create": "Registrar prospectos",
   "handoff.create": "Transferir a personal",

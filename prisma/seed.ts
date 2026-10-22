@@ -655,7 +655,7 @@ async function main() {
       name: "Emilia IA (demo)",
       keyPrefix: apiKey.slice(0, 12),
       keyHash: createHash("sha256").update(apiKey).digest("hex"),
-      scopes: ["studies.read", "prices.read", "quotes.create", "availability.read", "appointments.create", "leads.create", "handoff.create"],
+      scopes: ["studies.read", "prices.read", "quotes.create", "availability.read", "patients.write", "appointments.create", "leads.create", "handoff.create"],
     },
   });
 

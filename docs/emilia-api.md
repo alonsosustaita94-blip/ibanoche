@@ -37,7 +37,7 @@ Idempotency-Key: <valor único>   ← obligatorio en acciones que crean registro
 
 ### Idempotencia
 
-Las acciones `createQuote`, `createAppointment`, `createLead` y `handoffToHuman` requieren el encabezado `Idempotency-Key`: de 8 a 100 caracteres, solo letras, números, `_` o `-`.
+Las acciones `findOrCreatePatient`, `createQuote`, `createAppointment`, `createLead` y `handoffToHuman` requieren el encabezado `Idempotency-Key`: de 8 a 100 caracteres, solo letras, números, `_` o `-`.
 
 Si se repite la misma llave, la API devuelve la respuesta original sin crear otro registro. Usa una llave nueva por cada intención real del usuario y reutilízala solo en reintentos de red.
 
@@ -48,6 +48,8 @@ Si se repite la misma llave, la API devuelve la respuesta original sin crear otr
 | `searchStudies` | `studies.read` | No |
 | `getApprovedPrice` | `prices.read` | No |
 | `createQuote` | `quotes.create` | Sí |
+| `listBranches` | `availability.read` | No |
+| `findOrCreatePatient` | `patients.write` | Sí |
 | `checkAvailability` | `availability.read` | No |
 | `createAppointment` | `appointments.create` | Sí |
 | `createLead` | `leads.create` | Sí |
@@ -169,6 +171,42 @@ Genera una cotización con los precios vigentes. Los precios quedan fijos en la 
 { "ok": true, "data": { "quoteId": "cmv…", "folio": "COT-2026-000351", "totalCents": 18000, "validUntil": "2026-11-04T23:08:40.099Z" } }
 ```
 
+### `listBranches`
+
+Sucursales activas (solo la de la llave, si está limitada a una). Emilia la usa para obtener el `branchId`.
+
+```json
+{}
+```
+
+```json
+{ "ok": true, "data": [{ "id": "cmv…", "code": "MAT", "name": "Matriz", "address": "…", "phone": "…" }] }
+```
+
+### `findOrCreatePatient`
+
+Obtiene el paciente para agendar su cita. Reutiliza la ficha que tenga **el mismo teléfono y el mismo nombre y apellido paterno**; si no existe, crea una nueva con origen `EMILIA`. Un teléfono puede ser de varias personas (por ejemplo, una mamá que agenda para su hijo), por eso se compara también el nombre.
+
+```json
+{
+  "branchId": "cmv…",
+  "firstName": "Ana",
+  "lastName": "López",
+  "secondLastName": "Ruiz",
+  "birthDate": "1990-05-12",
+  "phone": "2221234567",
+  "email": "ana@example.com"
+}
+```
+
+- `secondLastName`, `birthDate` y `email` son opcionales.
+- La ficha nueva queda **sin autorización de contacto** (`contactConsent = false`); el personal la registra en la visita.
+- Solo devuelve el identificador y el folio: Emilia no consulta expedientes.
+
+```json
+{ "ok": true, "data": { "patientId": "cmv…", "folio": "PAC-000123", "created": true } }
+```
+
 ### `checkAvailability`
 
 Horarios con cupo para un día, según el horario configurado de la sucursal, la capacidad por intervalo y la anticipación mínima.
@@ -193,7 +231,7 @@ Horarios con cupo para un día, según el horario configurado de la sucursal, la
 
 ### `createAppointment`
 
-Solicita una cita para un paciente existente. La cita queda en estado `PENDING`.
+Solicita una cita para un paciente (usa antes `findOrCreatePatient` para obtener su `patientId`). La cita queda en estado `PENDING`.
 
 El servidor rechaza la solicitud en estos casos:
 

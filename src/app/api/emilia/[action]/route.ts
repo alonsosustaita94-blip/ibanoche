@@ -9,6 +9,7 @@ import { authenticateApiKey, rateLimit, type ApiClientContext } from "@/server/s
 import { createAppointment, getAvailability } from "@/server/services/appointments";
 import { createQuote } from "@/server/services/quotes";
 import { currentPublicPrices } from "@/server/services/pricing";
+import { findOrCreatePatientForEmilia } from "@/server/services/patients";
 
 /**
  * API para Emilia IA. Cada acción requiere un alcance (scope) de la llave,
@@ -31,6 +32,16 @@ const schemas = {
     prospectPhone: z.string().trim().max(20).optional(),
     items: z.array(z.object({ studyId: z.string().min(1), quantity: z.number().int().min(1).max(20).default(1) })).min(1).max(20),
     conversationId: z.string().optional(),
+  }),
+  listBranches: z.object({}),
+  findOrCreatePatient: z.object({
+    branchId: z.string().min(1),
+    firstName: z.string().trim().min(2).max(80),
+    lastName: z.string().trim().min(2).max(80),
+    secondLastName: z.string().trim().max(80).optional(),
+    birthDate: date.optional(),
+    phone: z.string().trim().min(10).max(20),
+    email: z.string().trim().toLowerCase().email().max(120).optional(),
   }),
   checkAvailability: z.object({ branchId: z.string().min(1), date, type: z.enum(["BRANCH", "HOME"]).default("BRANCH") }),
   createAppointment: z.object({
@@ -59,13 +70,15 @@ const SCOPES: Record<Action, string> = {
   searchStudies: "studies.read",
   getApprovedPrice: "prices.read",
   createQuote: "quotes.create",
+  listBranches: "availability.read",
+  findOrCreatePatient: "patients.write",
   checkAvailability: "availability.read",
   createAppointment: "appointments.create",
   createLead: "leads.create",
   handoffToHuman: "handoff.create",
 };
 
-const MUTATIONS: Action[] = ["createQuote", "createAppointment", "createLead", "handoffToHuman"];
+const MUTATIONS: Action[] = ["findOrCreatePatient", "createQuote", "createAppointment", "createLead", "handoffToHuman"];
 
 function json(status: number, body: unknown) {
   return NextResponse.json(body, { status, headers: { "Cache-Control": "no-store" } });
@@ -113,6 +126,25 @@ async function handle(action: Action, input: unknown, client: ApiClientContext) 
         { userId: null, roleMaxBps: 0 },
       );
       return { quoteId: q.id, folio: q.folio, totalCents: q.totalCents, validUntil: q.validUntil };
+    }
+    case "listBranches": {
+      schemas.listBranches.parse(input);
+      const branches = await db.branch.findMany({
+        where: { active: true, ...(client.branchId ? { id: client.branchId } : {}) },
+        select: { id: true, code: true, name: true, address: true, phone: true },
+        orderBy: { name: "asc" },
+      });
+      return branches;
+    }
+    case "findOrCreatePatient": {
+      const d = schemas.findOrCreatePatient.parse(input);
+      if (!(await branchAllowed(client, d.branchId))) throw new BusinessError("Sucursal no permitida.");
+      if (d.birthDate && (new Date(d.birthDate) > new Date() || new Date(d.birthDate) < new Date("1900-01-01"))) {
+        throw new BusinessError("Fecha de nacimiento no válida.");
+      }
+      // Solo se devuelve el identificador: Emilia no consulta expedientes.
+      const { patient, created } = await findOrCreatePatientForEmilia(d);
+      return { patientId: patient.id, folio: patient.folio, created };
     }
     case "checkAvailability": {
       const d = schemas.checkAvailability.parse(input);

@@ -83,3 +83,49 @@ export async function updatePatient(id: string, input: PatientInput) {
   });
   return { before, after };
 }
+
+/**
+ * Paciente que llega por Emilia (WhatsApp): reutiliza la ficha con el mismo teléfono
+ * y el mismo nombre; si no existe, crea una nueva. Un mismo teléfono puede ser de
+ * varias personas (p. ej. una mamá que agenda para su hijo), por eso se compara también el nombre.
+ */
+export async function findOrCreatePatientForEmilia(input: {
+  firstName: string;
+  lastName: string;
+  secondLastName?: string;
+  birthDate?: string;
+  phone: string;
+  email?: string;
+  branchId: string;
+}) {
+  const phone = normalizePhone(input.phone);
+  const existing = phone
+    ? await db.patient.findFirst({
+        where: {
+          phoneNormalized: phone,
+          firstName: { equals: input.firstName, mode: "insensitive" },
+          lastName: { equals: input.lastName, mode: "insensitive" },
+        },
+        orderBy: { createdAt: "asc" },
+      })
+    : null;
+  if (existing) return { patient: existing, created: false };
+  const patient = await createPatient({
+    firstName: input.firstName,
+    lastName: input.lastName,
+    secondLastName: input.secondLastName,
+    birthDate: input.birthDate,
+    phone: input.phone,
+    email: input.email,
+    type: "PARTICULAR",
+    status: "ACTIVE",
+    source: "EMILIA",
+    branchId: input.branchId,
+    contactConsent: false,
+    prefersWhatsApp: true,
+    prefersEmail: false,
+    prefersPhone: false,
+    confirmDuplicate: true,
+  });
+  return { patient, created: true };
+}

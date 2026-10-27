@@ -1,7 +1,8 @@
 // IBANOCHE CRM — modelo de datos administrativo y comercial.
 //
-// Este sistema NO es clínico: no existen campos para resultados, valores
-// analíticos, diagnósticos, tratamientos ni interpretaciones médicas.
+// Este sistema NO es clínico: no existen campos para valores analíticos,
+// diagnósticos, tratamientos ni interpretaciones médicas. Los resultados solo
+// se guardan como el PDF que emite el laboratorio (StudyResult), para entregarlo.
 // Importes en centavos (Int) para evitar errores de redondeo.
 // Porcentajes en puntos base (Int): 1000 = 10.00 %.
 
@@ -100,6 +101,7 @@ model User {
   notifications         Notification[]
   appointmentsAssigned  Appointment[]         @relation("AppointmentResponsible")
   appointmentsCreated   Appointment[]         @relation("AppointmentCreator")
+  resultsUploaded       StudyResult[]
   quotes                Quote[]
   orders                Order[]
   orderEvents           OrderEvent[]
@@ -200,6 +202,7 @@ model Patient {
   interactions  PatientInteraction[]
   conversations Conversation[]
   opportunities Opportunity[]
+  results       StudyResult[]
 
   @@index([branchId])
   @@index([phoneNormalized])
@@ -213,6 +216,28 @@ enum InteractionType {
   EMAIL
   VISIT
   NOTE
+}
+
+/// PDF de resultados que emite el laboratorio, para entregarlo al paciente.
+/// El CRM no lee ni interpreta su contenido. Emilia lo envía por WhatsApp solo
+/// al teléfono registrado del paciente, con un enlace temporal de un solo uso.
+model StudyResult {
+  id             String    @id @default(cuid())
+  patientId      String
+  patient        Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  fileName       String
+  sizeBytes      Int
+  data           Bytes
+  note           String?
+  uploadedById   String?
+  uploadedBy     User?     @relation(fields: [uploadedById], references: [id])
+  downloadToken  String?   @unique
+  tokenExpiresAt DateTime?
+  sentAt         DateTime?
+  sentCount      Int       @default(0)
+  createdAt      DateTime  @default(now())
+
+  @@index([patientId, createdAt])
 }
 
 model PatientInteraction {

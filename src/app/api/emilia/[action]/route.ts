@@ -1,10 +1,11 @@
+import { randomBytes } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z, ZodError } from "zod";
 import { db } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { BusinessError } from "@/lib/action";
-import { normalizePhone, searchTextWhere } from "@/lib/utils";
+import { normalizePhone, normalizeText, searchTextWhere } from "@/lib/utils";
 import { authenticateApiKey, rateLimit, type ApiClientContext } from "@/server/services/api-auth";
 import { createAppointment, getAvailability } from "@/server/services/appointments";
 import { createQuote } from "@/server/services/quotes";
@@ -15,10 +16,14 @@ import { findOrCreatePatientForEmilia } from "@/server/services/patients";
  * API para Emilia IA. Cada acción requiere un alcance (scope) de la llave,
  * valida sus parámetros y queda registrada en la auditoría.
  *
- * Emilia NO puede: diagnosticar, interpretar resultados, consultar resultados
- * clínicos, autorizar reembolsos, modificar precios ni aplicar descuentos.
+ * Emilia NO puede: diagnosticar, interpretar resultados, leer el contenido de
+ * los resultados, autorizar reembolsos, modificar precios ni aplicar descuentos.
  * Por eso no existen acciones para ello y las cotizaciones se crean sin descuento.
+ * Solo puede entregar el PDF de resultados al teléfono registrado del paciente.
  */
+
+/** Vigencia del enlace temporal para descargar un PDF de resultados. */
+const RESULT_LINK_MINUTES = 30;
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato YYYY-MM-DD");
 
@@ -51,7 +56,16 @@ const schemas = {
     type: z.enum(["BRANCH", "HOME"]).default("BRANCH"),
     homeAddress: z.string().trim().max(300).optional(),
     studyIds: z.array(z.string()).max(20).default([]),
+    notes: z.string().trim().max(500).optional(),
     conversationId: z.string().optional(),
+  }),
+  listAppointments: z
+    .object({ from: z.string().datetime(), to: z.string().datetime() })
+    .refine((d) => new Date(d.to).getTime() - new Date(d.from).getTime() <= 8 * 86400_000, "El rango máximo es de 8 días."),
+  findResults: z.object({
+    phone: z.string().trim().min(10).max(20),
+    firstName: z.string().trim().min(2).max(80),
+    age: z.number().int().min(0).max(120).optional(),
   }),
   createLead: z.object({
     name: z.string().trim().min(2).max(120),
@@ -74,6 +88,8 @@ const SCOPES: Record<Action, string> = {
   findOrCreatePatient: "patients.write",
   checkAvailability: "availability.read",
   createAppointment: "appointments.create",
+  listAppointments: "appointments.read",
+  findResults: "results.read",
   createLead: "leads.create",
   handoffToHuman: "handoff.create",
 };
@@ -89,7 +105,13 @@ async function branchAllowed(client: ApiClientContext, branchId: string) {
   return Boolean(await db.branch.findFirst({ where: { id: branchId, active: true } }));
 }
 
-async function handle(action: Action, input: unknown, client: ApiClientContext) {
+const ageOn = (birth: Date, now = new Date()) => {
+  let age = now.getUTCFullYear() - birth.getUTCFullYear();
+  if (now.getUTCMonth() < birth.getUTCMonth() || (now.getUTCMonth() === birth.getUTCMonth() && now.getUTCDate() < birth.getUTCDate())) age--;
+  return age;
+};
+
+async function handle(action: Action, input: unknown, client: ApiClientContext, origin: string) {
   switch (action) {
     case "searchStudies": {
       const { query, limit } = schemas.searchStudies.parse(input);
@@ -159,10 +181,72 @@ async function handle(action: Action, input: unknown, client: ApiClientContext) 
       if (!patient) throw new BusinessError("Paciente no encontrado.");
       // Emilia solicita la cita: queda pendiente de confirmación por el personal.
       const appt = await createAppointment(
-        { patientId: d.patientId, branchId: d.branchId, startsAt: new Date(d.startsAt), type: d.type, homeAddress: d.homeAddress, studyIds: d.studyIds, source: "EMILIA", status: "PENDING" },
+        { patientId: d.patientId, branchId: d.branchId, startsAt: new Date(d.startsAt), type: d.type, homeAddress: d.homeAddress, studyIds: d.studyIds, notes: d.notes, source: "EMILIA", status: "PENDING" },
         null,
       );
       return { appointmentId: appt.id, folio: appt.folio, status: appt.status, startsAt: appt.startsAt };
+    }
+    case "listAppointments": {
+      // Para avisos al laboratorio y recordatorios al paciente. Solo datos de contacto y de agenda.
+      const d = schemas.listAppointments.parse(input);
+      const appts = await db.appointment.findMany({
+        where: {
+          isDemo: false,
+          ...(client.branchId ? { branchId: client.branchId } : {}),
+          OR: [
+            { startsAt: { gte: new Date(d.from), lte: new Date(d.to) } },
+            { createdAt: { gte: new Date(d.from), lte: new Date(d.to) } },
+          ],
+        },
+        include: { patient: true, branch: true, studies: { include: { study: true } } },
+        orderBy: { startsAt: "asc" },
+        take: 300,
+      });
+      return appts.map((a) => ({
+        id: a.id,
+        folio: a.folio,
+        startsAt: a.startsAt,
+        createdAt: a.createdAt,
+        status: a.status,
+        type: a.type,
+        source: a.source,
+        homeAddress: a.homeAddress,
+        notes: a.notes,
+        branch: { name: a.branch.name, address: a.branch.address },
+        studies: a.studies.map((s) => s.study.name),
+        patient: {
+          firstName: a.patient.firstName,
+          lastName: a.patient.lastName,
+          phone: a.patient.phoneNormalized,
+          prefersWhatsApp: a.patient.prefersWhatsApp,
+          contactConsent: a.patient.contactConsent,
+        },
+      }));
+    }
+    case "findResults": {
+      // Solo para el número registrado del paciente: teléfono y nombre deben coincidir con la ficha.
+      const d = schemas.findResults.parse(input);
+      const phone = normalizePhone(d.phone);
+      const first = normalizeText(d.firstName).split(/\s+/)[0];
+      const candidates = await db.patient.findMany({
+        where: { phoneNormalized: phone, isDemo: false, ...(client.branchId ? { branchId: client.branchId } : {}) },
+        include: { results: { orderBy: { createdAt: "desc" }, take: 5, select: { id: true, fileName: true, createdAt: true } } },
+      });
+      const matches = candidates.filter(
+        (p) => normalizeText(p.firstName).split(/\s+/).includes(first) && (d.age === undefined || !p.birthDate || Math.abs(ageOn(p.birthDate) - d.age) <= 1),
+      );
+      if (!matches.length) return { found: false, results: [], note: "No hay un paciente con ese nombre registrado con este número de WhatsApp." };
+      const results = matches.flatMap((p) => p.results).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime()).slice(0, 5);
+      if (!results.length) return { found: true, results: [], note: "Aún no hay resultados cargados para este paciente." };
+      const expires = new Date(Date.now() + RESULT_LINK_MINUTES * 60_000);
+      const links = [];
+      for (const r of results) {
+        const token = randomBytes(24).toString("base64url");
+        await db.studyResult.update({ where: { id: r.id }, data: { downloadToken: token, tokenExpiresAt: expires, sentAt: new Date(), sentCount: { increment: 1 } } });
+        const file = r.fileName.replace(/\.pdf$/i, "").replace(/[^A-Za-z0-9_-]+/g, "_").slice(0, 60) || "resultados";
+        links.push({ id: r.id, fileName: `${file}.pdf`, createdAt: r.createdAt, url: `${origin}/api/resultados/${r.id}/${token}/${file}.pdf`, expiresAt: expires });
+      }
+      return { found: true, results: links };
     }
     case "createLead": {
       const d = schemas.createLead.parse(input);
@@ -211,7 +295,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ act
   }
 
   try {
-    const data = await handle(act, body, client);
+    const data = await handle(act, body, client, req.nextUrl.origin);
     const response = { ok: true, data } as const;
     if (MUTATIONS.includes(act) && idemKey) {
       await db.idempotencyRecord.create({ data: { key: `${client.id}:${idemKey}`, scope: act, response: JSON.parse(JSON.stringify(response)) as Prisma.InputJsonValue } }).catch(() => {});

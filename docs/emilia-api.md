@@ -332,3 +332,29 @@ Mientras no se configure `EMILIA_AGENT_URL` y la integración del canal (WhatsAp
 - Mover el límite de solicitudes a un almacén compartido si hay varias instancias.
 - Rotar llaves periódicamente y revocar las que no se usen.
 - Revisar el aviso de privacidad y el consentimiento de contacto de los pacientes antes de enviar mensajes salientes.
+
+---
+
+## Acciones agregadas (octubre 2026)
+
+### `listAppointments` · scope `appointments.read`
+
+Citas (no demo) que inician **o** se crearon dentro del rango (máximo 8 días). Zaiko la usa cada 5 minutos para avisar al laboratorio de cada cita nueva y recordar su cita al paciente unas 2 horas antes.
+
+```json
+{ "from": "2026-10-27T00:00:00.000Z", "to": "2026-10-28T00:00:00.000Z" }
+```
+
+Devuelve folio, horario, estado, tipo, origen, notas, sucursal, nombres de estudios y del paciente solo nombre, teléfono y preferencias de contacto.
+
+### `findResults` · scope `results.read`
+
+Busca los PDF de resultados del paciente **solo** si el teléfono coincide con la ficha y el nombre coincide; si la ficha tiene fecha de nacimiento, la edad también debe coincidir (±1 año). Genera para cada PDF un enlace temporal de 30 minutos (`/api/resultados/<id>/<token>/<archivo>.pdf`) que Zaiko envía por WhatsApp.
+
+```json
+{ "phone": "2221234567", "firstName": "Ana", "age": 34 }
+```
+
+`createAppointment` acepta además `notes` (edad, factura, correo…).
+
+Los PDF se cargan en **Pacientes → ficha → Resultados** (máximo 4 MB). El CRM no lee ni interpreta su contenido.

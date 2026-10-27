@@ -30,6 +30,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { PatientFormDialog } from "../patient-form";
 import { InteractionForm } from "./interaction-form";
+import { ResultsPanel } from "./results-panel";
 
 export const metadata: Metadata = { title: "Perfil del paciente" };
 
@@ -45,6 +46,11 @@ export default async function PatientProfile({ params }: { params: Promise<{ id:
       quotes: { orderBy: { issuedAt: "desc" }, take: 30, include: { _count: { select: { items: true } } } },
       orders: { orderBy: { createdAt: "desc" }, take: 30, include: { payments: { orderBy: { createdAt: "desc" } }, _count: { select: { items: true } } } },
       interactions: { orderBy: { createdAt: "desc" }, take: 50, include: { user: true } },
+      results: {
+        orderBy: { createdAt: "desc" },
+        take: 30,
+        select: { id: true, fileName: true, sizeBytes: true, note: true, createdAt: true, sentAt: true, uploadedBy: { select: { name: true } } },
+      },
     },
   });
   if (!patient) notFound();
@@ -190,6 +196,7 @@ export default async function PatientProfile({ params }: { params: Promise<{ id:
           <Tabs defaultValue="citas">
             <TabsList>
               <TabsTrigger value="citas">Citas ({patient.appointments.length})</TabsTrigger>
+              <TabsTrigger value="resultados">Resultados ({patient.results.length})</TabsTrigger>
               <TabsTrigger value="cotizaciones">Cotizaciones ({patient.quotes.length})</TabsTrigger>
               <TabsTrigger value="ordenes">Órdenes ({patient.orders.length})</TabsTrigger>
               <TabsTrigger value="pagos">Pagos ({payments.length})</TabsTrigger>
@@ -225,6 +232,22 @@ export default async function PatientProfile({ params }: { params: Promise<{ id:
               ) : (
                 <EmptyState title="Sin citas registradas" />
               )}
+            </TabsContent>
+
+            <TabsContent value="resultados">
+              <ResultsPanel
+                patientId={patient.id}
+                canManage={can(user, "patients.manage")}
+                results={patient.results.map((r) => ({
+                  id: r.id,
+                  fileName: r.fileName,
+                  sizeBytes: r.sizeBytes,
+                  note: r.note,
+                  createdAt: r.createdAt.toISOString(),
+                  sentAt: r.sentAt?.toISOString() ?? null,
+                  uploadedBy: r.uploadedBy?.name ?? null,
+                }))}
+              />
             </TabsContent>
 
             <TabsContent value="cotizaciones">
